@@ -256,7 +256,7 @@ export function WorldProvider({ children }: { children: ReactNode }) {
       setView,
       addMap, updateMap, addPin, removePin, updatePin, setActiveMap,
     }),
-    [state, createTemplate, updateTemplate, deleteTemplate, addField, removeField, createDocument, updateDocument, deleteDocument, openTab, closeTab, setActiveTab, addMap, updateMap, addPin, removePin, updatePin, setActiveMap],
+    [state, createTemplate, updateTemplate, deleteTemplate, addField, removeField, createDocument, updateDocument, deleteDocument, openTab, closeTab, setActiveTab, setView, addMap, updateMap, addPin, removePin, updatePin, setActiveMap],
   );
 
   return <WorldCtx.Provider value={value}>{children}</WorldCtx.Provider>;
