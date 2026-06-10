@@ -1,29 +1,73 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { WorldProvider, useWorld } from "@/lib/worldbuilder/store";
+import { Sidebar } from "@/components/wb/Sidebar";
+import { Tabs } from "@/components/wb/Tabs";
+import { DocumentView } from "@/components/wb/DocumentView";
+import { GraphView } from "@/components/wb/GraphView";
+import { TimelineView } from "@/components/wb/TimelineView";
+import { MapView } from "@/components/wb/MapView";
+import { CommandPalette } from "@/components/wb/CommandPalette";
+import { TemplateManager } from "@/components/wb/TemplateManager";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "Obsidian Codex — Worldbuilding & RPG Campaign Manager" },
+      { name: "description", content: "A modern worldbuilding and RPG campaign manager with templates, relationships, graph view, timelines, and interactive maps." },
+      { property: "og:title", content: "Obsidian Codex" },
+      { property: "og:description", content: "Worldbuilding & RPG Campaign Manager." },
     ],
   }),
-  component: Index,
+  component: IndexPage,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function IndexPage() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <WorldProvider>
+      <Shell />
+    </WorldProvider>
+  );
+}
+
+function Shell() {
+  const { state } = useWorld();
+  const [cmdOpen, setCmdOpen] = useState(false);
+  const [tplOpen, setTplOpen] = useState(false);
+  const activeDoc = state.documents.find((d) => d.id === state.activeTab);
+
+  return (
+    <div className="dark h-screen w-screen flex bg-background text-foreground overflow-hidden">
+      <Sidebar onOpenCommand={() => setCmdOpen(true)} onOpenTemplates={() => setTplOpen(true)} />
+      <main className="flex-1 min-w-0 flex flex-col">
+        <Tabs />
+        <div className="flex-1 min-h-0">
+          {state.view === "document" && activeDoc && <DocumentView key={activeDoc.id} doc={activeDoc} />}
+          {state.view === "document" && !activeDoc && <EmptyState />}
+          {state.view === "graph" && <GraphView />}
+          {state.view === "timeline" && <TimelineView />}
+          {state.view === "map" && <MapView />}
+        </div>
+      </main>
+      <CommandPalette open={cmdOpen} setOpen={setCmdOpen} onOpenTemplates={() => setTplOpen(true)} />
+      <TemplateManager open={tplOpen} onOpenChange={setTplOpen} />
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="h-full flex items-center justify-center">
+      <div className="text-center max-w-md">
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary/30 to-chart-3/30 border border-border flex items-center justify-center mb-4">
+          <span className="text-2xl">✦</span>
+        </div>
+        <h2 className="text-xl font-semibold mb-1">Welcome to your Codex</h2>
+        <p className="text-sm text-muted-foreground">
+          Open a document from the sidebar, press <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">⌘K</kbd> to
+          search, or create a new entry from a template.
+        </p>
+      </div>
     </div>
   );
 }
