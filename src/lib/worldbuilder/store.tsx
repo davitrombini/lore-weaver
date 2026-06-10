@@ -200,7 +200,7 @@ export function WorldProvider({ children }: { children: ReactNode }) {
   const openTab = useCallback((id: string) => dispatch({ type: "openTab", id }), []);
   const closeTab = useCallback((id: string) => dispatch({ type: "closeTab", id }), []);
   const setActiveTab = useCallback((id: string | null) => dispatch({ type: "setActiveTab", id }), []);
-  const setView = useCallback((v: WorkspaceState["view"]) => dispatch({ type: "setView", v }) as any, []);
+  const setView = useCallback((v: WorkspaceState["view"]) => dispatch({ type: "setView", view: v }), []);
 
   const addMap = useCallback((name: string, image: string): WorldMap => {
     const m: WorldMap = { id: "map_" + uid(), name, image, pins: [] };
@@ -253,7 +253,7 @@ export function WorldProvider({ children }: { children: ReactNode }) {
       createTemplate, updateTemplate, deleteTemplate, addField, removeField,
       createDocument, updateDocument, deleteDocument,
       openTab, closeTab, setActiveTab,
-      setView: (v) => dispatch({ type: "setView", view: v }),
+      setView,
       addMap, updateMap, addPin, removePin, updatePin, setActiveMap,
     }),
     [state, createTemplate, updateTemplate, deleteTemplate, addField, removeField, createDocument, updateDocument, deleteDocument, openTab, closeTab, setActiveTab, addMap, updateMap, addPin, removePin, updatePin, setActiveMap],
