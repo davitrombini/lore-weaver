@@ -33,7 +33,7 @@ function FieldEditor({
     case "select":
       return (
         <Select value={(value as string) ?? ""} onValueChange={onChange}>
-          <SelectTrigger><SelectValue placeholder="Choose…" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Escolher…" /></SelectTrigger>
           <SelectContent>
             {(field.options ?? []).map((o) => (
               <SelectItem key={o} value={o}>{o}</SelectItem>
