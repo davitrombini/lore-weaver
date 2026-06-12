@@ -10,14 +10,14 @@ import type { FieldType, Template } from "@/lib/worldbuilder/types";
 import { cn } from "@/lib/utils";
 
 const FIELD_TYPES: { value: FieldType; label: string }[] = [
-  { value: "text", label: "Short Text" },
-  { value: "richtext", label: "Rich Text" },
-  { value: "number", label: "Number" },
-  { value: "select", label: "Select" },
-  { value: "boolean", label: "Boolean" },
-  { value: "date", label: "Date" },
-  { value: "image", label: "Image" },
-  { value: "relationship", label: "Relationship" },
+  { value: "text", label: "Texto Curto" },
+  { value: "richtext", label: "Texto Rico" },
+  { value: "number", label: "Número" },
+  { value: "select", label: "Seleção" },
+  { value: "boolean", label: "Booleano" },
+  { value: "date", label: "Data" },
+  { value: "image", label: "Imagem" },
+  { value: "relationship", label: "Relacionamento" },
 ];
 
 export function TemplateManager({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
@@ -33,7 +33,7 @@ export function TemplateManager({ open, onOpenChange }: { open: boolean; onOpenC
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl p-0 overflow-hidden h-[640px] flex flex-col">
         <DialogHeader className="px-6 pt-5 pb-3 border-b border-border">
-          <DialogTitle>Template Manager</DialogTitle>
+          <DialogTitle>Gerenciador de Templates</DialogTitle>
         </DialogHeader>
         <div className="flex flex-1 min-h-0">
           {/* List */}
@@ -57,11 +57,11 @@ export function TemplateManager({ open, onOpenChange }: { open: boolean; onOpenC
               size="sm"
               className="w-full mt-2"
               onClick={() => {
-                const t = createTemplate("New Template");
+                const t = createTemplate("Novo Template");
                 setSelectedId(t.id);
               }}
             >
-              <Plus className="w-3.5 h-3.5 mr-1" /> Add Template
+              <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar Template
             </Button>
           </div>
 
@@ -72,7 +72,7 @@ export function TemplateManager({ open, onOpenChange }: { open: boolean; onOpenC
                 template={selected}
                 onUpdate={updateTemplate}
                 onDelete={() => {
-                  if (confirm(`Delete template "${selected.name}" and all its documents?`)) {
+                  if (confirm(`Excluir o template "${selected.name}" e todos os seus documentos?`)) {
                     deleteTemplate(selected.id);
                     setSelectedId(state.templates.find((t) => t.id !== selected.id)?.id ?? null);
                   }
@@ -96,7 +96,7 @@ export function TemplateManager({ open, onOpenChange }: { open: boolean; onOpenC
                 setNewField={setNewField}
               />
             ) : (
-              <div className="text-muted-foreground text-sm">Select a template.</div>
+              <div className="text-muted-foreground text-sm">Selecione um template.</div>
             )}
           </div>
         </div>
@@ -147,29 +147,29 @@ function TemplateEditor({
       </div>
 
       <div>
-        <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Fields</div>
+        <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Campos</div>
         <div className="space-y-1">
           {template.fields.map((f) => (
             <div key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md border border-border bg-card">
               <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
               <span className="flex-1 text-sm font-medium">{f.name}</span>
-              <span className="text-xs text-muted-foreground capitalize">{f.type}{f.multi ? " · multi" : ""}</span>
+              <span className="text-xs text-muted-foreground capitalize">{f.type}{f.multi ? " · múltiplo" : ""}</span>
               <button onClick={() => onRemoveField(f.id)} className="text-muted-foreground hover:text-destructive">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
           ))}
           {template.fields.length === 0 && (
-            <div className="text-sm text-muted-foreground italic">No fields yet.</div>
+            <div className="text-sm text-muted-foreground italic">Nenhum campo ainda.</div>
           )}
         </div>
       </div>
 
       <div className="border-t border-border pt-4">
-        <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Add Field</div>
+        <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Adicionar Campo</div>
         <div className="grid grid-cols-2 gap-2">
           <Input
-            placeholder="Field name"
+            placeholder="Nome do campo"
             value={newField.name}
             onChange={(e) => setNewField({ ...newField, name: e.target.value })}
           />
@@ -205,15 +205,15 @@ function TemplateEditor({
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="single">Single link</SelectItem>
-                  <SelectItem value="multi">Multiple links</SelectItem>
+                  <SelectItem value="single">Link único</SelectItem>
+                  <SelectItem value="multi">Múltiplos links</SelectItem>
                 </SelectContent>
               </Select>
             </>
           )}
         </div>
         <Button size="sm" className="mt-3" onClick={onAddField} disabled={!newField.name.trim()}>
-          <Plus className="w-3.5 h-3.5 mr-1" /> Add Field
+          <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar Campo
         </Button>
       </div>
     </div>
