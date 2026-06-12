@@ -46,7 +46,7 @@ export function Sidebar({ onOpenCommand, onOpenTemplates }: Props) {
         <div className="w-7 h-7 rounded-md bg-gradient-to-br from-primary to-chart-3 flex items-center justify-center">
           <FileText className="w-4 h-4 text-primary-foreground" />
         </div>
-        <div className="font-semibold tracking-tight">Obsidian Codex</div>
+        <div className="font-semibold tracking-tight">Void</div>
       </div>
 
       {/* Search trigger */}
@@ -56,7 +56,7 @@ export function Sidebar({ onOpenCommand, onOpenTemplates }: Props) {
           className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-sidebar-accent/40 hover:bg-sidebar-accent text-sidebar-foreground/70 hover:text-sidebar-foreground text-sm border border-sidebar-border"
         >
           <Search className="w-3.5 h-3.5" />
-          <span className="flex-1 text-left">Search…</span>
+          <span className="flex-1 text-left">Buscar…</span>
           <kbd className="text-[10px] px-1.5 py-0.5 rounded bg-background/40 border border-sidebar-border">⌘K</kbd>
         </button>
       </div>
@@ -64,7 +64,7 @@ export function Sidebar({ onOpenCommand, onOpenTemplates }: Props) {
       {/* Filter docs */}
       <div className="px-3 pb-2">
         <input
-          placeholder="Filter documents"
+          placeholder="Filtrar documentos"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           className="w-full px-2 py-1 rounded-md bg-transparent text-xs border border-sidebar-border focus:outline-none focus:border-primary/60"
@@ -73,9 +73,9 @@ export function Sidebar({ onOpenCommand, onOpenTemplates }: Props) {
 
       {/* Views */}
       <div className="px-3 pb-2 space-y-0.5">
-        <ViewBtn v="graph" label="Graph View" icon={Network} />
-        <ViewBtn v="timeline" label="Timeline" icon={Clock} />
-        <ViewBtn v="map" label="Maps" icon={MapIcon} />
+        <ViewBtn v="graph" label="Grafo" icon={Network} />
+        <ViewBtn v="timeline" label="Linha do Tempo" icon={Clock} />
+        <ViewBtn v="map" label="Mapas" icon={MapIcon} />
       </div>
 
       <div className="h-px bg-sidebar-border mx-3 my-2" />
@@ -85,7 +85,7 @@ export function Sidebar({ onOpenCommand, onOpenTemplates }: Props) {
         <button
           onClick={onOpenTemplates}
           className="text-sidebar-foreground/60 hover:text-sidebar-foreground"
-          title="Manage templates"
+          title="Gerenciar templates"
         >
           <Settings2 className="w-3.5 h-3.5" />
         </button>
@@ -110,9 +110,9 @@ export function Sidebar({ onOpenCommand, onOpenTemplates }: Props) {
                 <span className="text-sm font-medium flex-1 truncate">{tpl.name}</span>
                 <span className="text-[10px] text-sidebar-foreground/40 mr-1">{docs.length}</span>
                 <button
-                  onClick={() => createDocument(tpl.id, "New " + tpl.name.replace(/s$/, ""))}
+                  onClick={() => createDocument(tpl.id, "Novo " + tpl.name.replace(/s$/, ""))}
                   className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-sidebar-accent text-sidebar-foreground/70"
-                  title="New entry"
+                  title="Nova entrada"
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
@@ -127,7 +127,7 @@ export function Sidebar({ onOpenCommand, onOpenTemplates }: Props) {
                     className="overflow-hidden pl-6"
                   >
                     {docs.length === 0 && (
-                      <div className="text-[11px] text-sidebar-foreground/40 italic px-2 py-1">No entries</div>
+                      <div className="text-[11px] text-sidebar-foreground/40 italic px-2 py-1">Sem entradas</div>
                     )}
                     {docs.map((d) => (
                       <div key={d.id} className="group flex items-center gap-1.5 rounded-md hover:bg-sidebar-accent">
@@ -142,7 +142,7 @@ export function Sidebar({ onOpenCommand, onOpenTemplates }: Props) {
                         </button>
                         <button
                           onClick={() => {
-                            if (confirm(`Delete "${d.title}"?`)) deleteDocument(d.id);
+                            if (confirm(`Excluir "${d.title}"?`)) deleteDocument(d.id);
                           }}
                           className="opacity-0 group-hover:opacity-100 px-1 text-sidebar-foreground/50 hover:text-destructive"
                         >
@@ -163,7 +163,7 @@ export function Sidebar({ onOpenCommand, onOpenTemplates }: Props) {
           onClick={onOpenTemplates}
           className="w-full justify-start mt-2 text-sidebar-foreground/60 hover:text-sidebar-foreground"
         >
-          <Plus className="w-3.5 h-3.5 mr-1" /> New Template
+          <Plus className="w-3.5 h-3.5 mr-1" /> Novo Template
         </Button>
       </div>
     </aside>

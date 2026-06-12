@@ -19,10 +19,10 @@ export function CommandPalette({ open, setOpen, onOpenTemplates }: { open: boole
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder="Search documents, templates, actions…" />
+      <CommandInput placeholder="Buscar documentos, templates, ações…" />
       <CommandList>
-        <CommandEmpty>No results.</CommandEmpty>
-        <CommandGroup heading="Documents">
+        <CommandEmpty>Nenhum resultado.</CommandEmpty>
+        <CommandGroup heading="Documentos">
           {state.documents.map((d) => {
             const tpl = state.templates.find((t) => t.id === d.templateId);
             return (
@@ -38,23 +38,23 @@ export function CommandPalette({ open, setOpen, onOpenTemplates }: { open: boole
             );
           })}
         </CommandGroup>
-        <CommandGroup heading="Create">
+        <CommandGroup heading="Criar">
           {state.templates.map((t) => (
             <CommandItem
               key={t.id}
-              value={`new ${t.name}`}
-              onSelect={() => { createDocument(t.id, "New " + t.name.replace(/s$/, "")); setOpen(false); }}
+              value={`novo ${t.name}`}
+              onSelect={() => { createDocument(t.id, "Novo " + t.name.replace(/s$/, "")); setOpen(false); }}
             >
               <Icon name={t.icon} className="w-4 h-4 mr-2" style={{ color: t.color }} />
-              New {t.name.replace(/s$/, "")}
+              Novo {t.name.replace(/s$/, "")}
             </CommandItem>
           ))}
         </CommandGroup>
-        <CommandGroup heading="Views">
-          <CommandItem onSelect={() => { setActiveTab(null); setView("graph"); setOpen(false); }}>Graph View</CommandItem>
-          <CommandItem onSelect={() => { setActiveTab(null); setView("timeline"); setOpen(false); }}>Timeline View</CommandItem>
-          <CommandItem onSelect={() => { setActiveTab(null); setView("map"); setOpen(false); }}>Map View</CommandItem>
-          <CommandItem onSelect={() => { onOpenTemplates(); setOpen(false); }}>Open Template Manager</CommandItem>
+        <CommandGroup heading="Visualizações">
+          <CommandItem onSelect={() => { setActiveTab(null); setView("graph"); setOpen(false); }}>Grafo</CommandItem>
+          <CommandItem onSelect={() => { setActiveTab(null); setView("timeline"); setOpen(false); }}>Linha do Tempo</CommandItem>
+          <CommandItem onSelect={() => { setActiveTab(null); setView("map"); setOpen(false); }}>Mapa</CommandItem>
+          <CommandItem onSelect={() => { onOpenTemplates(); setOpen(false); }}>Abrir Gerenciador de Templates</CommandItem>
         </CommandGroup>
       </CommandList>
     </CommandDialog>

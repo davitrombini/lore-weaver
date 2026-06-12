@@ -33,7 +33,7 @@ function FieldEditor({
     case "select":
       return (
         <Select value={(value as string) ?? ""} onValueChange={onChange}>
-          <SelectTrigger><SelectValue placeholder="Choose…" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Escolher…" /></SelectTrigger>
           <SelectContent>
             {(field.options ?? []).map((o) => (
               <SelectItem key={o} value={o}>{o}</SelectItem>
@@ -60,7 +60,7 @@ function FieldEditor({
 
 function FieldReader({ field, value, onOpen }: { field: FieldDef; value: unknown; onOpen: (id: string) => void }) {
   if (value === undefined || value === null || value === "" || (Array.isArray(value) && !value.length)) {
-    if (field.type !== "boolean") return <div className="text-sm text-muted-foreground italic">Empty</div>;
+    if (field.type !== "boolean") return <div className="text-sm text-muted-foreground italic">Vazio</div>;
   }
   switch (field.type) {
     case "text":
@@ -71,7 +71,7 @@ function FieldReader({ field, value, onOpen }: { field: FieldDef; value: unknown
     case "boolean":
       return (
         <div className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${value ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>
-          {value ? "Yes" : "No"}
+          {value ? "Sim" : "Não"}
         </div>
       );
     case "select":
@@ -102,7 +102,7 @@ export function DocumentView({ doc }: { doc: DocumentEntry }) {
   const heroImageField = useMemo(() => tpl?.fields.find((f) => f.type === "image"), [tpl]);
   const heroImage = heroImageField ? (doc.values[heroImageField.id] as string | undefined) : undefined;
 
-  if (!tpl) return <div className="p-8 text-muted-foreground">Template missing.</div>;
+  if (!tpl) return <div className="p-8 text-muted-foreground">Template não encontrado.</div>;
 
   const setValue = (fid: string, v: unknown) =>
     updateDocument(doc.id, { values: { ...doc.values, [fid]: v } });
@@ -150,13 +150,13 @@ export function DocumentView({ doc }: { doc: DocumentEntry }) {
               onClick={() => setEdit((v) => !v)}
               className="gap-2"
             >
-              {edit ? <><Eye className="w-4 h-4" /> Read</> : <><Edit3 className="w-4 h-4" /> Edit</>}
+              {edit ? <><Eye className="w-4 h-4" /> Ler</> : <><Edit3 className="w-4 h-4" /> Editar</>}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => {
-                if (confirm(`Delete "${doc.title}"?`)) deleteDocument(doc.id);
+                if (confirm(`Excluir "${doc.title}"?`)) deleteDocument(doc.id);
               }}
             >
               <Trash2 className="w-4 h-4" />
@@ -175,7 +175,7 @@ export function DocumentView({ doc }: { doc: DocumentEntry }) {
           >
             {tpl.fields.length === 0 && (
               <div className="text-sm text-muted-foreground border border-dashed border-border rounded-lg p-6 text-center">
-                This template has no fields yet. Add fields in the Template Manager.
+                Este template ainda não tem campos. Adicione campos no Gerenciador de Templates.
               </div>
             )}
             {tpl.fields.map((f) => (

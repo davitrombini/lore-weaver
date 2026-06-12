@@ -22,7 +22,7 @@ export function MapView() {
       r.onload = () => res(r.result as string);
       r.readAsDataURL(file);
     });
-    const m = addMap(newName.trim() || "Untitled Map", url);
+    const m = addMap(newName.trim() || "Mapa sem título", url);
     setNewName("");
     setActiveMap(m.id);
   };
@@ -32,13 +32,13 @@ export function MapView() {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
-    addPin(activeMap.id, { x, y, label: "New Pin" });
+    addPin(activeMap.id, { x, y, label: "Novo Pino" });
   };
 
   return (
     <div className="h-full flex">
       <aside className="w-60 border-r border-border bg-sidebar p-3 overflow-auto">
-        <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Maps</div>
+        <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Mapas</div>
         <div className="space-y-1 mb-4">
           {state.maps.map((m) => (
             <button
@@ -52,11 +52,11 @@ export function MapView() {
             </button>
           ))}
           {state.maps.length === 0 && (
-            <div className="text-xs italic text-muted-foreground">No maps yet</div>
+            <div className="text-xs italic text-muted-foreground">Nenhum mapa ainda</div>
           )}
         </div>
         <div className="space-y-2 border-t border-border pt-3">
-          <Input placeholder="Map name" value={newName} onChange={(e) => setNewName(e.target.value)} />
+          <Input placeholder="Nome do mapa" value={newName} onChange={(e) => setNewName(e.target.value)} />
           <input
             ref={fileRef}
             type="file"
@@ -65,7 +65,7 @@ export function MapView() {
             onChange={(e) => onUpload(e.target.files?.[0])}
           />
           <Button size="sm" className="w-full" onClick={() => fileRef.current?.click()}>
-            <Upload className="w-3.5 h-3.5 mr-1" /> Upload Map
+            <Upload className="w-3.5 h-3.5 mr-1" /> Enviar Mapa
           </Button>
         </div>
       </aside>
@@ -75,16 +75,16 @@ export function MapView() {
           <div className="h-full flex items-center justify-center text-center">
             <div className="max-w-sm">
               <MapPin className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
-              <h3 className="font-semibold text-lg mb-1">No map loaded</h3>
+              <h3 className="font-semibold text-lg mb-1">Nenhum mapa carregado</h3>
               <p className="text-sm text-muted-foreground">
-                Upload a map image to start placing pins linked to location documents.
+                Envie a imagem de um mapa para começar a posicionar pinos vinculados a documentos de localização.
               </p>
             </div>
           </div>
         ) : (
           <div>
             <h2 className="text-xl font-semibold mb-1">{activeMap.name}</h2>
-            <p className="text-sm text-muted-foreground mb-4">Click anywhere on the map to drop a pin.</p>
+            <p className="text-sm text-muted-foreground mb-4">Clique em qualquer lugar do mapa para adicionar um pino.</p>
             <div
               ref={imgRef}
               onClick={onClickMap}
@@ -112,21 +112,21 @@ export function MapView() {
                       <Input
                         value={p.label ?? ""}
                         onChange={(e) => updatePin(activeMap.id, p.id, { label: e.target.value })}
-                        placeholder="Pin label"
+                        placeholder="Rótulo do pino"
                         className="mb-2"
                       />
-                      <div className="text-xs text-muted-foreground mb-1">Linked document</div>
+                      <div className="text-xs text-muted-foreground mb-1">Documento vinculado</div>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button variant="outline" size="sm" className="w-full justify-start">
-                            {linked ? linked.title : "Link document…"}
+                            {linked ? linked.title : "Vincular documento…"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-64 p-0">
                           <Command>
-                            <CommandInput placeholder="Search…" />
+                            <CommandInput placeholder="Buscar…" />
                             <CommandList>
-                              <CommandEmpty>None.</CommandEmpty>
+                              <CommandEmpty>Nenhum.</CommandEmpty>
                               <CommandGroup>
                                 {state.documents.map((d) => (
                                   <CommandItem
@@ -145,7 +145,7 @@ export function MapView() {
                       <div className="flex justify-between mt-2">
                         {linked && (
                           <Button size="sm" variant="ghost" onClick={() => openTab(linked.id)}>
-                            Open
+                            Abrir
                           </Button>
                         )}
                         <Button

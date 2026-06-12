@@ -101,7 +101,7 @@ export function ImageField({ value, onChange, readOnly }: Props) {
       ) : (
         <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
           <Upload className="w-7 h-7 text-muted-foreground mb-2" />
-          <p className="text-sm font-medium">Drop image, paste (⌘V), or click to upload</p>
+          <p className="text-sm font-medium">Solte uma imagem, cole (⌘V) ou clique para enviar</p>
           <p className="text-xs text-muted-foreground mt-1">PNG, JPG, WebP</p>
         </div>
       )}

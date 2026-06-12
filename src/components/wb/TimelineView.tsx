@@ -25,10 +25,10 @@ export function TimelineView() {
   return (
     <div className="h-full overflow-auto p-8">
       <div className="max-w-3xl mx-auto">
-        <h2 className="text-2xl font-semibold mb-1">Timeline</h2>
-        <p className="text-sm text-muted-foreground mb-8">All documents with dates, in chronological order.</p>
+        <h2 className="text-2xl font-semibold mb-1">Linha do Tempo</h2>
+        <p className="text-sm text-muted-foreground mb-8">Todos os documentos com datas, em ordem cronológica.</p>
         {events.length === 0 ? (
-          <div className="text-muted-foreground italic">No dated documents yet.</div>
+          <div className="text-muted-foreground italic">Nenhum documento com data ainda.</div>
         ) : (
           <div className="relative pl-6 border-l border-border">
             {events.map((e, i) => {

@@ -13,10 +13,10 @@ import { TemplateManager } from "@/components/wb/TemplateManager";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Obsidian Codex — Worldbuilding & RPG Campaign Manager" },
-      { name: "description", content: "A modern worldbuilding and RPG campaign manager with templates, relationships, graph view, timelines, and interactive maps." },
-      { property: "og:title", content: "Obsidian Codex" },
-      { property: "og:description", content: "Worldbuilding & RPG Campaign Manager." },
+      { title: "Void — Gerenciador de Worldbuilding e Campanhas de RPG" },
+      { name: "description", content: "Um gerenciador moderno de worldbuilding e campanhas de RPG com templates, relacionamentos, visualização em grafo, linhas do tempo e mapas interativos." },
+      { property: "og:title", content: "Void" },
+      { property: "og:description", content: "Gerenciador de Worldbuilding e Campanhas de RPG." },
     ],
   }),
   component: IndexPage,
@@ -62,10 +62,10 @@ function EmptyState() {
         <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary/30 to-chart-3/30 border border-border flex items-center justify-center mb-4">
           <span className="text-2xl">✦</span>
         </div>
-        <h2 className="text-xl font-semibold mb-1">Welcome to your Codex</h2>
+        <h2 className="text-xl font-semibold mb-1">Bem-vindo ao Void</h2>
         <p className="text-sm text-muted-foreground">
-          Open a document from the sidebar, press <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">⌘K</kbd> to
-          search, or create a new entry from a template.
+          Abra um documento na barra lateral, pressione <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">⌘K</kbd> para
+          buscar, ou crie uma nova entrada a partir de um template.
         </p>
       </div>
     </div>

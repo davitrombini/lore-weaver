@@ -47,7 +47,7 @@ export function RelationshipField({ value, multi, targetTemplateId, excludeId, o
   };
 
   if (readOnly) {
-    if (!selectedDocs.length) return <div className="text-sm text-muted-foreground italic">None</div>;
+    if (!selectedDocs.length) return <div className="text-sm text-muted-foreground italic">Nenhum</div>;
     return (
       <div className="flex flex-wrap gap-1.5">
         {selectedDocs.map((d) => (
@@ -85,17 +85,17 @@ export function RelationshipField({ value, multi, targetTemplateId, excludeId, o
           >
             <span className={cn("truncate", !selectedDocs.length && "text-muted-foreground")}>
               {!multi && selectedDocs[0]?.title}
-              {multi && (selectedDocs.length ? `${selectedDocs.length} selected` : "Link documents…")}
-              {!multi && !selectedDocs[0] && "Select…"}
+              {multi && (selectedDocs.length ? `${selectedDocs.length} selecionados` : "Vincular documentos…")}
+              {!multi && !selectedDocs[0] && "Selecionar…"}
             </span>
             <ChevronsUpDown className="w-4 h-4 opacity-50 ml-2" />
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-[320px] p-0" align="start">
           <Command>
-            <CommandInput placeholder="Search documents…" />
+            <CommandInput placeholder="Buscar documentos…" />
             <CommandList>
-              <CommandEmpty>No documents.</CommandEmpty>
+              <CommandEmpty>Sem documentos.</CommandEmpty>
               <CommandGroup>
                 {candidates.map((d) => {
                   const tpl = state.templates.find((t) => t.id === d.templateId);
