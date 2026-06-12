@@ -37,8 +37,8 @@ export function GraphView() {
   return (
     <div className="h-full w-full overflow-auto bg-[radial-gradient(circle_at_center,oklch(0.22_0.014_260)_0%,oklch(0.15_0.012_260)_70%)] p-6">
       <div className="mb-4">
-        <h2 className="text-xl font-semibold">Graph View</h2>
-        <p className="text-sm text-muted-foreground">Click a node to open the document.</p>
+        <h2 className="text-xl font-semibold">Grafo</h2>
+        <p className="text-sm text-muted-foreground">Clique em um nó para abrir o documento.</p>
       </div>
       <svg viewBox={`0 0 ${layout.W} ${layout.H}`} className="w-full h-[calc(100%-3rem)] max-w-[1100px] mx-auto">
         <defs>
@@ -88,7 +88,7 @@ export function GraphView() {
         ))}
         {layout.nodes.length === 0 && (
           <text x={layout.W / 2} y={layout.H / 2} textAnchor="middle" fill="oklch(0.6 0.01 260)">
-            No documents yet.
+            Nenhum documento ainda.
           </text>
         )}
       </svg>

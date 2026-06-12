@@ -35,7 +35,7 @@ export function Tabs() {
                 className="flex items-center gap-2 min-w-0"
               >
                 {tpl && <Icon name={tpl.icon} className="w-3.5 h-3.5 shrink-0" style={{ color: tpl.color }} />}
-                <span className="truncate">{doc.title || "Untitled"}</span>
+                <span className="truncate">{doc.title || "Sem título"}</span>
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); closeTab(id); }}
