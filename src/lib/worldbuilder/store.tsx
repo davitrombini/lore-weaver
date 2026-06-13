@@ -112,6 +112,8 @@ interface Ctx {
   deleteTemplate: (id: string) => void;
   addField: (templateId: string, field: Omit<FieldDef, "id">) => void;
   removeField: (templateId: string, fieldId: string) => void;
+  updateField: (templateId: string, fieldId: string, patch: Partial<FieldDef>) => void;
+  moveField: (templateId: string, fieldId: string, direction: -1 | 1) => void;
   // documents
   createDocument: (templateId: string, title?: string) => DocumentEntry;
   updateDocument: (id: string, patch: Partial<DocumentEntry>) => void;
@@ -128,6 +130,8 @@ interface Ctx {
   removePin: (mapId: string, pinId: string) => void;
   updatePin: (mapId: string, pinId: string, patch: Partial<MapPin>) => void;
   setActiveMap: (id: string | null) => void;
+  setSettings: (patch: Partial<NonNullable<WorkspaceState["settings"]>>) => void;
+  replaceState: (next: WorkspaceState) => void;
 }
 
 const WorldCtx = createContext<Ctx | null>(null);
