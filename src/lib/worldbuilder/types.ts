@@ -57,4 +57,19 @@ export interface WorkspaceState {
   activeTab: string | null;
   view: "document" | "graph" | "timeline" | "map";
   activeMapId: string | null;
+  settings?: {
+    hideEmptyFields?: boolean;
+  };
+}
+
+export interface ProjectMeta {
+  id: string;
+  name: string;
+  icon: string; // lucide icon name
+  updatedAt: number;
+}
+
+export interface ProjectsIndex {
+  projects: ProjectMeta[];
+  currentId: string | null;
 }
