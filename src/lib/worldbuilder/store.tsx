@@ -20,7 +20,8 @@ type Action =
   | { type: "setView"; view: WorkspaceState["view"] }
   | { type: "addMap"; map: WorldMap }
   | { type: "updateMap"; id: string; patch: Partial<WorldMap> }
-  | { type: "setActiveMap"; id: string | null };
+  | { type: "setActiveMap"; id: string | null }
+  | { type: "setSettings"; patch: Partial<NonNullable<WorkspaceState["settings"]>> };
 
 function initial(seeded = true): WorkspaceState {
   const seed = seeded ? buildSeed() : { templates: [], documents: [] };
@@ -131,26 +132,30 @@ interface Ctx {
 
 const WorldCtx = createContext<Ctx | null>(null);
 
-export function WorldProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, initial);
-
-  // hydrate
-  useEffect(() => {
+export function WorldProvider({ projectId, children }: { projectId: string; children: ReactNode }) {
+  const [state, dispatch] = useReducer(reducer, undefined, () => {
+    if (typeof window === "undefined") return initial(false);
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as WorkspaceState;
-        dispatch({ type: "hydrate", payload: parsed });
+      const raw = localStorage.getItem(storageKeyFor(projectId));
+      if (raw) return JSON.parse(raw) as WorkspaceState;
+      // legacy fallback (only for the first migrated project)
+      const legacy = localStorage.getItem(LEGACY_KEY);
+      if (legacy) {
+        localStorage.removeItem(LEGACY_KEY);
+        return JSON.parse(legacy) as WorkspaceState;
       }
     } catch {}
-  }, []);
+    return initial(true);
+  });
 
-  // persist
+  const firstSave = useRef(true);
   useEffect(() => {
+    // skip the very first run to avoid clobbering an existing snapshot during hydration
+    if (firstSave.current) { firstSave.current = false; return; }
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(storageKeyFor(projectId), JSON.stringify(state));
     } catch {}
-  }, [state]);
+  }, [state, projectId]);
 
   const createTemplate = useCallback((name: string, icon = "FileText"): Template => {
     const t: Template = { id: "tpl_" + uid(), name, icon, fields: [] };
@@ -179,6 +184,32 @@ export function WorldProvider({ children }: { children: ReactNode }) {
         type: "updateTemplate",
         template: { ...tpl, fields: tpl.fields.filter((f) => f.id !== fieldId) },
       });
+    },
+    [state.templates],
+  );
+
+  const updateField = useCallback(
+    (templateId: string, fieldId: string, patch: Partial<FieldDef>) => {
+      const tpl = state.templates.find((t) => t.id === templateId);
+      if (!tpl) return;
+      dispatch({
+        type: "updateTemplate",
+        template: { ...tpl, fields: tpl.fields.map((f) => (f.id === fieldId ? { ...f, ...patch } : f)) },
+      });
+    },
+    [state.templates],
+  );
+
+  const moveField = useCallback(
+    (templateId: string, fieldId: string, direction: -1 | 1) => {
+      const tpl = state.templates.find((t) => t.id === templateId);
+      if (!tpl) return;
+      const idx = tpl.fields.findIndex((f) => f.id === fieldId);
+      const next = idx + direction;
+      if (idx < 0 || next < 0 || next >= tpl.fields.length) return;
+      const fields = [...tpl.fields];
+      [fields[idx], fields[next]] = [fields[next], fields[idx]];
+      dispatch({ type: "updateTemplate", template: { ...tpl, fields } });
     },
     [state.templates],
   );
@@ -252,16 +283,24 @@ export function WorldProvider({ children }: { children: ReactNode }) {
 
   const setActiveMap = useCallback((id: string | null) => dispatch({ type: "setActiveMap", id }), []);
 
+  const setSettings = useCallback(
+    (patch: Partial<NonNullable<WorkspaceState["settings"]>>) => dispatch({ type: "setSettings", patch }),
+    [],
+  );
+
+  const replaceState = useCallback((next: WorkspaceState) => dispatch({ type: "hydrate", payload: next }), []);
+
   const value = useMemo<Ctx>(
     () => ({
       state,
-      createTemplate, updateTemplate, deleteTemplate, addField, removeField,
+      createTemplate, updateTemplate, deleteTemplate, addField, removeField, updateField, moveField,
       createDocument, updateDocument, deleteDocument,
       openTab, closeTab, setActiveTab,
       setView,
       addMap, updateMap, addPin, removePin, updatePin, setActiveMap,
+      setSettings, replaceState,
     }),
-    [state, createTemplate, updateTemplate, deleteTemplate, addField, removeField, createDocument, updateDocument, deleteDocument, openTab, closeTab, setActiveTab, setView, addMap, updateMap, addPin, removePin, updatePin, setActiveMap],
+    [state, createTemplate, updateTemplate, deleteTemplate, addField, removeField, updateField, moveField, createDocument, updateDocument, deleteDocument, openTab, closeTab, setActiveTab, setView, addMap, updateMap, addPin, removePin, updatePin, setActiveMap, setSettings, replaceState],
   );
 
   return <WorldCtx.Provider value={value}>{children}</WorldCtx.Provider>;
