@@ -1,18 +1,41 @@
 import { useMemo, useState } from "react";
-import { ChevronRight, Plus, Search, Settings2, FileText, Trash2, Network, Clock, Map as MapIcon } from "lucide-react";
+import {
+  ChevronRight, Plus, Search, Settings2, Trash2, Network, Clock, Map as MapIcon,
+  ArrowLeft, Download, Library, MoreVertical, Pencil, EyeOff, Eye,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useWorld } from "@/lib/worldbuilder/store";
-import { Icon } from "./icons";
+import { Icon, ICON_CHOICES } from "./icons";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { useModals } from "./confirm";
+import type { ProjectMeta } from "@/lib/worldbuilder/types";
 
 interface Props {
+  project: ProjectMeta;
+  onExit: () => void;
+  onRename: (name: string) => void;
+  onIconChange: (icon: string) => void;
+  onExport: () => void;
   onOpenCommand: () => void;
   onOpenTemplates: () => void;
+  onOpenLibrary: () => void;
 }
 
-export function Sidebar({ onOpenCommand, onOpenTemplates }: Props) {
-  const { state, openTab, createDocument, deleteDocument, setView, setActiveTab } = useWorld();
+export function Sidebar({
+  project, onExit, onRename, onIconChange, onExport,
+  onOpenCommand, onOpenTemplates, onOpenLibrary,
+}: Props) {
+  const { state, openTab, createDocument, deleteDocument, setView, setActiveTab, setSettings } = useWorld();
+  const { confirm } = useModals();
+  const [iconOpen, setIconOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState(project.name);
+  const hideEmpty = !!state.settings?.hideEmptyFields;
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [filter, setFilter] = useState("");
 
@@ -41,12 +64,54 @@ export function Sidebar({ onOpenCommand, onOpenTemplates }: Props) {
 
   return (
     <aside className="w-72 shrink-0 h-full bg-sidebar border-r border-sidebar-border flex flex-col">
-      {/* Brand */}
-      <div className="px-4 pt-4 pb-3 flex items-center gap-2">
-        <div className="w-7 h-7 rounded-md bg-gradient-to-br from-primary to-chart-3 flex items-center justify-center">
-          <FileText className="w-4 h-4 text-primary-foreground" />
-        </div>
-        <div className="font-semibold tracking-tight">Void</div>
+      {/* Project header */}
+      <div className="px-3 pt-3 pb-2 flex items-center gap-2">
+        <button
+          onClick={onExit}
+          title="Voltar ao menu inicial"
+          className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/70 hover:text-sidebar-foreground"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={() => setIconOpen(true)}
+          title="Mudar ícone"
+          className="w-7 h-7 rounded-md bg-gradient-to-br from-primary/40 to-chart-3/20 border border-sidebar-border flex items-center justify-center hover:from-primary/60 transition-colors"
+        >
+          <Icon name={project.icon} className="w-4 h-4 text-primary" />
+        </button>
+        <button
+          onClick={() => { setRenameValue(project.name); setRenameOpen(true); }}
+          className="font-semibold tracking-tight truncate flex-1 text-left text-sm hover:text-primary"
+          title="Renomear projeto"
+        >{project.name}</button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="p-1 rounded hover:bg-sidebar-accent text-sidebar-foreground/70 hover:text-sidebar-foreground">
+              <MoreVertical className="w-3.5 h-3.5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => { setRenameValue(project.name); setRenameOpen(true); }}>
+              <Pencil className="w-3.5 h-3.5 mr-2" /> Renomear projeto
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setIconOpen(true)}>
+              <Icon name={project.icon} className="w-3.5 h-3.5 mr-2" /> Mudar ícone
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onExport}>
+              <Download className="w-3.5 h-3.5 mr-2" /> Exportar projeto
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setSettings({ hideEmptyFields: !hideEmpty })}>
+              {hideEmpty ? <Eye className="w-3.5 h-3.5 mr-2" /> : <EyeOff className="w-3.5 h-3.5 mr-2" />}
+              {hideEmpty ? "Mostrar campos vazios" : "Ocultar campos vazios"}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onExit}>
+              <ArrowLeft className="w-3.5 h-3.5 mr-2" /> Voltar ao menu
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Search trigger */}
@@ -82,13 +147,22 @@ export function Sidebar({ onOpenCommand, onOpenTemplates }: Props) {
 
       <div className="flex items-center justify-between px-4 pb-1">
         <div className="text-[10px] uppercase tracking-widest text-sidebar-foreground/50">Templates</div>
-        <button
-          onClick={onOpenTemplates}
-          className="text-sidebar-foreground/60 hover:text-sidebar-foreground"
-          title="Gerenciar templates"
-        >
-          <Settings2 className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onOpenLibrary}
+            className="text-sidebar-foreground/60 hover:text-sidebar-foreground"
+            title="Biblioteca de templates"
+          >
+            <Library className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={onOpenTemplates}
+            className="text-sidebar-foreground/60 hover:text-sidebar-foreground"
+            title="Gerenciar templates"
+          >
+            <Settings2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Tree */}
@@ -141,8 +215,14 @@ export function Sidebar({ onOpenCommand, onOpenTemplates }: Props) {
                           {d.title}
                         </button>
                         <button
-                          onClick={() => {
-                            if (confirm(`Excluir "${d.title}"?`)) deleteDocument(d.id);
+                          onClick={async () => {
+                            const ok = await confirm({
+                              title: `Excluir "${d.title}"?`,
+                              description: "Esta ação não pode ser desfeita.",
+                              confirmText: "Excluir",
+                              destructive: true,
+                            });
+                            if (ok) deleteDocument(d.id);
                           }}
                           className="opacity-0 group-hover:opacity-100 px-1 text-sidebar-foreground/50 hover:text-destructive"
                         >
@@ -165,7 +245,48 @@ export function Sidebar({ onOpenCommand, onOpenTemplates }: Props) {
         >
           <Plus className="w-3.5 h-3.5 mr-1" /> Novo Template
         </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onOpenLibrary}
+          className="w-full justify-start text-sidebar-foreground/60 hover:text-sidebar-foreground"
+        >
+          <Library className="w-3.5 h-3.5 mr-1" /> Biblioteca de Templates
+        </Button>
       </div>
+
+      {/* Rename dialog */}
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Renomear projeto</DialogTitle></DialogHeader>
+          <Input autoFocus value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && renameValue.trim()) { onRename(renameValue.trim()); setRenameOpen(false); } }} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameOpen(false)}>Cancelar</Button>
+            <Button disabled={!renameValue.trim()} onClick={() => { onRename(renameValue.trim()); setRenameOpen(false); }}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Icon dialog */}
+      <Dialog open={iconOpen} onOpenChange={setIconOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Ícone do projeto</DialogTitle></DialogHeader>
+          <Select value={project.icon} onValueChange={(v) => { onIconChange(v); }}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent className="max-h-64">
+              {ICON_CHOICES.map((n) => (
+                <SelectItem key={n} value={n}>
+                  <div className="flex items-center gap-2"><Icon name={n} className="w-3.5 h-3.5" /> {n}</div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button onClick={() => setIconOpen(false)}>Concluir</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </aside>
   );
 }
