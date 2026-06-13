@@ -3,11 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, GripVertical } from "lucide-react";
+import { Plus, Trash2, ChevronUp, ChevronDown, Library, Pencil, Check, X } from "lucide-react";
 import { useWorld } from "@/lib/worldbuilder/store";
 import { Icon, ICON_CHOICES } from "./icons";
 import type { FieldType, Template } from "@/lib/worldbuilder/types";
 import { cn } from "@/lib/utils";
+import { useModals } from "./confirm";
 
 const FIELD_TYPES: { value: FieldType; label: string }[] = [
   { value: "text", label: "Texto Curto" },
@@ -20,8 +21,9 @@ const FIELD_TYPES: { value: FieldType; label: string }[] = [
   { value: "relationship", label: "Relacionamento" },
 ];
 
-export function TemplateManager({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const { state, createTemplate, updateTemplate, deleteTemplate, addField, removeField } = useWorld();
+export function TemplateManager({ open, onOpenChange, onOpenLibrary }: { open: boolean; onOpenChange: (o: boolean) => void; onOpenLibrary?: () => void }) {
+  const { state, createTemplate, updateTemplate, deleteTemplate, addField, removeField, updateField, moveField } = useWorld();
+  const { confirm } = useModals();
   const [selectedId, setSelectedId] = useState<string | null>(state.templates[0]?.id ?? null);
   const selected = state.templates.find((t) => t.id === selectedId) ?? null;
 
@@ -33,7 +35,14 @@ export function TemplateManager({ open, onOpenChange }: { open: boolean; onOpenC
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl p-0 overflow-hidden h-[640px] flex flex-col">
         <DialogHeader className="px-6 pt-5 pb-3 border-b border-border">
-          <DialogTitle>Gerenciador de Templates</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Gerenciador de Templates</DialogTitle>
+            {onOpenLibrary && (
+              <Button size="sm" variant="outline" onClick={onOpenLibrary} className="gap-1.5">
+                <Library className="w-3.5 h-3.5" /> Biblioteca
+              </Button>
+            )}
+          </div>
         </DialogHeader>
         <div className="flex flex-1 min-h-0">
           {/* List */}
@@ -63,6 +72,11 @@ export function TemplateManager({ open, onOpenChange }: { open: boolean; onOpenC
             >
               <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar Template
             </Button>
+            {onOpenLibrary && (
+              <Button variant="ghost" size="sm" className="w-full mt-1 text-muted-foreground" onClick={onOpenLibrary}>
+                <Library className="w-3.5 h-3.5 mr-1" /> Da Biblioteca
+              </Button>
+            )}
           </div>
 
           {/* Editor */}
@@ -71,13 +85,21 @@ export function TemplateManager({ open, onOpenChange }: { open: boolean; onOpenC
               <TemplateEditor
                 template={selected}
                 onUpdate={updateTemplate}
-                onDelete={() => {
-                  if (confirm(`Excluir o template "${selected.name}" e todos os seus documentos?`)) {
+                onDelete={async () => {
+                  const ok = await confirm({
+                    title: `Excluir o template "${selected.name}"?`,
+                    description: "Todos os documentos vinculados também serão removidos. Esta ação não pode ser desfeita.",
+                    confirmText: "Excluir",
+                    destructive: true,
+                  });
+                  if (ok) {
                     deleteTemplate(selected.id);
                     setSelectedId(state.templates.find((t) => t.id !== selected.id)?.id ?? null);
                   }
                 }}
                 onRemoveField={(fid) => removeField(selected.id, fid)}
+                onUpdateField={(fid, patch) => updateField(selected.id, fid, patch)}
+                onMoveField={(fid, dir) => moveField(selected.id, fid, dir)}
                 onAddField={() => {
                   if (!newField.name.trim()) return;
                   addField(selected.id, {
@@ -106,17 +128,21 @@ export function TemplateManager({ open, onOpenChange }: { open: boolean; onOpenC
 }
 
 function TemplateEditor({
-  template, onUpdate, onDelete, onRemoveField, onAddField, newField, setNewField,
+  template, onUpdate, onDelete, onRemoveField, onUpdateField, onMoveField, onAddField, newField, setNewField,
 }: {
   template: Template;
   onUpdate: (t: Template) => void;
   onDelete: () => void;
   onRemoveField: (fid: string) => void;
+  onUpdateField: (fid: string, patch: Partial<import("@/lib/worldbuilder/types").FieldDef>) => void;
+  onMoveField: (fid: string, dir: -1 | 1) => void;
   onAddField: () => void;
   newField: { name: string; type: FieldType; target?: string; multi?: boolean; options?: string };
   setNewField: (v: typeof newField) => void;
 }) {
   const { state } = useWorld();
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [draftName, setDraftName] = useState("");
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -149,16 +175,58 @@ function TemplateEditor({
       <div>
         <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Campos</div>
         <div className="space-y-1">
-          {template.fields.map((f) => (
-            <div key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md border border-border bg-card">
-              <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="flex-1 text-sm font-medium">{f.name}</span>
-              <span className="text-xs text-muted-foreground capitalize">{f.type}{f.multi ? " · múltiplo" : ""}</span>
-              <button onClick={() => onRemoveField(f.id)} className="text-muted-foreground hover:text-destructive">
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ))}
+          {template.fields.map((f, i) => {
+            const editing = editingField === f.id;
+            return (
+              <div key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md border border-border bg-card">
+                <div className="flex flex-col">
+                  <button
+                    disabled={i === 0}
+                    onClick={() => onMoveField(f.id, -1)}
+                    className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    title="Mover para cima"
+                  ><ChevronUp className="w-3 h-3" /></button>
+                  <button
+                    disabled={i === template.fields.length - 1}
+                    onClick={() => onMoveField(f.id, 1)}
+                    className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    title="Mover para baixo"
+                  ><ChevronDown className="w-3 h-3" /></button>
+                </div>
+                {editing ? (
+                  <Input
+                    autoFocus
+                    value={draftName}
+                    onChange={(e) => setDraftName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { onUpdateField(f.id, { name: draftName.trim() || f.name }); setEditingField(null); }
+                      if (e.key === "Escape") setEditingField(null);
+                    }}
+                    className="h-7 text-sm flex-1"
+                  />
+                ) : (
+                  <span className="flex-1 text-sm font-medium truncate">{f.name}</span>
+                )}
+                <Select value={f.type} onValueChange={(v: FieldType) => onUpdateField(f.id, { type: v })}>
+                  <SelectTrigger className="h-7 w-32 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {FIELD_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {editing ? (
+                  <>
+                    <button onClick={() => { onUpdateField(f.id, { name: draftName.trim() || f.name }); setEditingField(null); }} className="text-primary"><Check className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => setEditingField(null)} className="text-muted-foreground"><X className="w-3.5 h-3.5" /></button>
+                  </>
+                ) : (
+                  <button onClick={() => { setEditingField(f.id); setDraftName(f.name); }} className="text-muted-foreground hover:text-foreground" title="Renomear"><Pencil className="w-3.5 h-3.5" /></button>
+                )}
+                <button onClick={() => onRemoveField(f.id)} className="text-muted-foreground hover:text-destructive" title="Remover">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            );
+          })}
           {template.fields.length === 0 && (
             <div className="text-sm text-muted-foreground italic">Nenhum campo ainda.</div>
           )}
