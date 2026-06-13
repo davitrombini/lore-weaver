@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Edit3, Eye, Trash2 } from "lucide-react";
+import { Edit3, Eye, Trash2, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -11,6 +11,7 @@ import { RelationshipField } from "./RelationshipField";
 import { RichTextField } from "./RichTextField";
 import type { DocumentEntry, FieldDef, Template } from "@/lib/worldbuilder/types";
 import { motion, AnimatePresence } from "framer-motion";
+import { useModals } from "./confirm";
 
 function FieldEditor({
   field, value, onChange, docId,
@@ -95,9 +96,11 @@ function FieldReader({ field, value, onOpen }: { field: FieldDef; value: unknown
 }
 
 export function DocumentView({ doc }: { doc: DocumentEntry }) {
-  const { state, updateDocument, deleteDocument, openTab } = useWorld();
+  const { state, updateDocument, deleteDocument, openTab, setSettings } = useWorld();
+  const { confirm } = useModals();
   const tpl = state.templates.find((t) => t.id === doc.templateId) as Template | undefined;
   const [edit, setEdit] = useState(false);
+  const hideEmpty = !!state.settings?.hideEmptyFields;
 
   const heroImageField = useMemo(() => tpl?.fields.find((f) => f.type === "image"), [tpl]);
   const heroImage = heroImageField ? (doc.values[heroImageField.id] as string | undefined) : undefined;
@@ -106,6 +109,16 @@ export function DocumentView({ doc }: { doc: DocumentEntry }) {
 
   const setValue = (fid: string, v: unknown) =>
     updateDocument(doc.id, { values: { ...doc.values, [fid]: v } });
+
+  const isEmpty = (f: FieldDef) => {
+    const v = doc.values[f.id];
+    if (f.type === "boolean") return false;
+    if (v === undefined || v === null || v === "") return true;
+    if (Array.isArray(v) && !v.length) return true;
+    return false;
+  };
+
+  const visibleFields = !edit && hideEmpty ? tpl.fields.filter((f) => !isEmpty(f)) : tpl.fields;
 
   return (
     <div className="h-full overflow-auto">
@@ -144,6 +157,17 @@ export function DocumentView({ doc }: { doc: DocumentEntry }) {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {!edit && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSettings({ hideEmptyFields: !hideEmpty })}
+                title={hideEmpty ? "Mostrar campos vazios" : "Ocultar campos vazios"}
+                className="gap-2"
+              >
+                {hideEmpty ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </Button>
+            )}
             <Button
               variant={edit ? "default" : "secondary"}
               size="sm"
@@ -155,8 +179,14 @@ export function DocumentView({ doc }: { doc: DocumentEntry }) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                if (confirm(`Excluir "${doc.title}"?`)) deleteDocument(doc.id);
+              onClick={async () => {
+                const ok = await confirm({
+                  title: `Excluir "${doc.title}"?`,
+                  description: "Esta ação não pode ser desfeita.",
+                  confirmText: "Excluir",
+                  destructive: true,
+                });
+                if (ok) deleteDocument(doc.id);
               }}
             >
               <Trash2 className="w-4 h-4" />
@@ -178,7 +208,12 @@ export function DocumentView({ doc }: { doc: DocumentEntry }) {
                 Este template ainda não tem campos. Adicione campos no Gerenciador de Templates.
               </div>
             )}
-            {tpl.fields.map((f) => (
+            {!edit && hideEmpty && visibleFields.length === 0 && tpl.fields.length > 0 && (
+              <div className="text-sm text-muted-foreground border border-dashed border-border rounded-lg p-6 text-center">
+                Todos os campos estão vazios. Desative “Ocultar campos vazios” para vê-los.
+              </div>
+            )}
+            {visibleFields.map((f) => (
               <div key={f.id} className="space-y-1.5">
                 <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   {f.name}
