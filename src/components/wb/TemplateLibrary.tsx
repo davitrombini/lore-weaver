@@ -9,7 +9,7 @@ import { Icon } from "./icons";
 import { cn } from "@/lib/utils";
 
 export function TemplateLibrary({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const { state, createTemplate, addField } = useWorld();
+  const { createTemplate, addField, updateTemplate, state } = useWorld();
   const [query, setQuery] = useState("");
   const [activeCat, setActiveCat] = useState<string>("Todos");
   const [added, setAdded] = useState<Record<string, boolean>>({});
@@ -27,25 +27,14 @@ export function TemplateLibrary({ open, onOpenChange }: { open: boolean; onOpenC
     const lib = TEMPLATE_LIBRARY.find((t) => t.id === libId);
     if (!lib) return;
     const created = createTemplate(lib.name, lib.icon);
-    // patch color + fields after creation
-    const tplWithColor = { ...created, color: lib.color };
-    // use updateTemplate to persist color/icon
-    // We have createTemplate -> returns t; we then call addField for each
+    updateTemplate({ ...created, color: lib.color });
     for (const f of lib.fields) {
       addField(created.id, { name: f.name, type: f.type, options: f.options, multi: f.multi, targetTemplateId: f.targetTemplateId });
     }
-    // store color
-    state.templates.find((t) => t.id === created.id); // noop
-    // use a small workaround: directly call updateTemplate via context
-    // (we have it on context but the destructured one above doesn't include it; re-import via useWorld closure)
-    // We'll dispatch via createTemplate side effect — but simpler: use a separate updater
-    setTimeout(() => {
-      const ev = new CustomEvent("void:update-tpl-color", { detail: { id: created.id, color: lib.color } });
-      window.dispatchEvent(ev);
-    }, 0);
     setAdded((s) => ({ ...s, [libId]: true }));
     setTimeout(() => setAdded((s) => { const c = { ...s }; delete c[libId]; return c; }), 1500);
   };
+  void state;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
