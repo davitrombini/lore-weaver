@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Upload, Trash2, MapPin } from "lucide-react";
+import { Upload, Trash2, MapPin, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -12,6 +12,8 @@ export function MapView() {
   const fileRef = useRef<HTMLInputElement>(null);
   const imgRef = useRef<HTMLDivElement>(null);
   const [newName, setNewName] = useState("");
+  const [zoom, setZoom] = useState(1);
+  const [hoverPin, setHoverPin] = useState<{ id: string; x: number; y: number; label: string } | null>(null);
 
   const activeMap = state.maps.find((m) => m.id === state.activeMapId) ?? state.maps[0];
 
@@ -83,22 +85,44 @@ export function MapView() {
           </div>
         ) : (
           <div>
-            <h2 className="text-xl font-semibold mb-1">{activeMap.name}</h2>
-            <p className="text-sm text-muted-foreground mb-4">Clique em qualquer lugar do mapa para adicionar um pino.</p>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-xl font-semibold">{activeMap.name}</h2>
+                <p className="text-sm text-muted-foreground">Clique para adicionar um pino. Passe o mouse para ver o nome.</p>
+              </div>
+              <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1">
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.max(0.25, +(z - 0.25).toFixed(2)))} title="Reduzir">
+                  <ZoomOut className="w-3.5 h-3.5" />
+                </Button>
+                <div className="text-xs w-10 text-center tabular-nums text-muted-foreground">{Math.round(zoom * 100)}%</div>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.min(4, +(z + 0.25).toFixed(2)))} title="Ampliar">
+                  <ZoomIn className="w-3.5 h-3.5" />
+                </Button>
+                <div className="w-px h-5 bg-border mx-1" />
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom(1)} title="Restaurar">
+                  <Maximize2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+            <div className="overflow-auto border border-border rounded-lg bg-card max-h-[calc(100vh-180px)] relative">
             <div
               ref={imgRef}
               onClick={onClickMap}
-              className="relative inline-block border border-border rounded-lg overflow-hidden bg-card cursor-crosshair max-w-full"
+              className="relative inline-block cursor-crosshair origin-top-left transition-transform"
+              style={{ transform: `scale(${zoom})` }}
             >
-              <img src={activeMap.image} alt={activeMap.name} className="block max-w-full max-h-[calc(100vh-200px)]" />
+              <img src={activeMap.image} alt={activeMap.name} className="block max-w-none" draggable={false} />
               {activeMap.pins.map((p) => {
                 const linked = state.documents.find((d) => d.id === p.documentId);
+                const label = p.label || linked?.title || "Pino";
                 return (
                   <Popover key={p.id}>
                     <PopoverTrigger asChild>
                       <motion.button
                         type="button"
                         onClick={(e) => e.stopPropagation()}
+                        onMouseEnter={() => setHoverPin({ id: p.id, x: p.x, y: p.y, label })}
+                        onMouseLeave={() => setHoverPin((h) => (h?.id === p.id ? null : h))}
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         whileHover={{ scale: 1.15 }}
@@ -161,6 +185,15 @@ export function MapView() {
                   </Popover>
                 );
               })}
+              {hoverPin && (
+                <div
+                  className="pointer-events-none absolute -translate-x-1/2 -translate-y-[calc(100%+24px)] px-2 py-1 rounded-md bg-popover text-popover-foreground text-xs border border-border shadow-lg whitespace-nowrap"
+                  style={{ left: `${hoverPin.x * 100}%`, top: `${hoverPin.y * 100}%`, transform: `translate(-50%, -200%) scale(${1 / zoom})`, transformOrigin: "bottom center" }}
+                >
+                  {hoverPin.label}
+                </div>
+              )}
+            </div>
             </div>
           </div>
         )}
