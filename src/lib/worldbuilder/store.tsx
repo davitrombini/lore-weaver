@@ -1,8 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, type ReactNode } from "react";
 import type { DocumentEntry, Template, WorkspaceState, WorldMap, MapPin, FieldDef } from "./types";
 import { buildSeed } from "./seed";
 
-const STORAGE_KEY = "worldbuilder_state_v1";
+const LEGACY_KEY = "worldbuilder_state_v1";
+const storageKeyFor = (projectId: string) => `void_project_${projectId}`;
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 type Action =
@@ -21,8 +22,8 @@ type Action =
   | { type: "updateMap"; id: string; patch: Partial<WorldMap> }
   | { type: "setActiveMap"; id: string | null };
 
-function initial(): WorkspaceState {
-  const seed = buildSeed();
+function initial(seeded = true): WorkspaceState {
+  const seed = seeded ? buildSeed() : { templates: [], documents: [] };
   return {
     templates: seed.templates,
     documents: seed.documents,
@@ -31,6 +32,7 @@ function initial(): WorkspaceState {
     activeTab: seed.documents[0]?.id ?? null,
     view: "document",
     activeMapId: null,
+    settings: { hideEmptyFields: false },
   };
 }
 
@@ -95,8 +97,11 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
       };
     case "setActiveMap":
       return { ...state, activeMapId: action.id };
+    case "setSettings":
+      return { ...state, settings: { ...(state.settings ?? {}), ...action.patch } };
   }
 }
+
 
 interface Ctx {
   state: WorkspaceState;
