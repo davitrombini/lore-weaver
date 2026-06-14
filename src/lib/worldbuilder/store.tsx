@@ -51,7 +51,9 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
     case "deleteTemplate":
       return {
         ...state,
-        templates: state.templates.filter((t) => t.id !== action.id),
+        templates: state.templates
+          .filter((t) => t.id !== action.id)
+          .map((t) => (t.parentId === action.id ? { ...t, parentId: null } : t)),
         documents: state.documents.filter((d) => d.templateId !== action.id),
       };
     case "addDocument":
@@ -107,7 +109,7 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
 interface Ctx {
   state: WorkspaceState;
   // templates
-  createTemplate: (name: string, icon?: string) => Template;
+  createTemplate: (name: string, icon?: string, parentId?: string | null) => Template;
   updateTemplate: (t: Template) => void;
   deleteTemplate: (id: string) => void;
   addField: (templateId: string, field: Omit<FieldDef, "id">) => void;
@@ -161,8 +163,8 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
     } catch {}
   }, [state, projectId]);
 
-  const createTemplate = useCallback((name: string, icon = "FileText"): Template => {
-    const t: Template = { id: "tpl_" + uid(), name, icon, fields: [] };
+  const createTemplate = useCallback((name: string, icon = "FileText", parentId: string | null = null): Template => {
+    const t: Template = { id: "tpl_" + uid(), name, icon, fields: [], parentId: parentId ?? null };
     dispatch({ type: "addTemplate", template: t });
     return t;
   }, []);

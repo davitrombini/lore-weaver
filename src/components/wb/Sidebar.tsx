@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   ChevronRight, Plus, Search, Settings2, Trash2, Network, Clock, Map as MapIcon,
-  ArrowLeft, Download, Library, MoreVertical, Pencil, EyeOff, Eye,
+  ArrowLeft, Download, Library, MoreVertical, Pencil, EyeOff, Eye, FolderPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -13,7 +13,7 @@ import { Icon, ICON_CHOICES } from "./icons";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useModals } from "./confirm";
-import type { ProjectMeta } from "@/lib/worldbuilder/types";
+import type { ProjectMeta, Template, DocumentEntry, WorkspaceState } from "@/lib/worldbuilder/types";
 
 interface Props {
   project: ProjectMeta;
@@ -30,8 +30,8 @@ export function Sidebar({
   project, onExit, onRename, onIconChange, onExport,
   onOpenCommand, onOpenTemplates, onOpenLibrary,
 }: Props) {
-  const { state, openTab, createDocument, deleteDocument, setView, setActiveTab, setSettings } = useWorld();
-  const { confirm } = useModals();
+  const { state, openTab, createDocument, deleteDocument, setView, setActiveTab, setSettings, createTemplate } = useWorld();
+  const { confirm, prompt } = useModals();
   const [iconOpen, setIconOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState(project.name);
@@ -40,12 +40,14 @@ export function Sidebar({
   const [filter, setFilter] = useState("");
 
   const grouped = useMemo(() => {
-    return state.templates.map((tpl) => ({
-      tpl,
-      docs: state.documents
-        .filter((d) => d.templateId === tpl.id && d.title.toLowerCase().includes(filter.toLowerCase()))
-        .sort((a, b) => a.title.localeCompare(b.title)),
-    }));
+    const lower = filter.toLowerCase();
+    const docsFor = (tplId: string) =>
+      state.documents
+        .filter((d) => d.templateId === tplId && d.title.toLowerCase().includes(lower))
+        .sort((a, b) => a.title.localeCompare(b.title));
+    const childrenOf = (parentId: string | null) =>
+      state.templates.filter((t) => (t.parentId ?? null) === parentId);
+    return { childrenOf, docsFor };
   }, [state.templates, state.documents, filter]);
 
   const ViewBtn = ({ v, label, icon: I }: { v: typeof state.view; label: string; icon: typeof Network }) => (
@@ -167,75 +169,38 @@ export function Sidebar({
 
       {/* Tree */}
       <div className="flex-1 overflow-auto px-2 pb-4">
-        {grouped.map(({ tpl, docs }) => {
-          const isCollapsed = collapsed[tpl.id];
-          return (
-            <div key={tpl.id} className="mb-1">
-              <div className="group flex items-center gap-1 px-1.5 py-1 rounded-md hover:bg-sidebar-accent/50">
-                <button
-                  onClick={() => setCollapsed((c) => ({ ...c, [tpl.id]: !c[tpl.id] }))}
-                  className="p-0.5"
-                >
-                  <ChevronRight
-                    className={cn("w-3.5 h-3.5 text-sidebar-foreground/50 transition-transform", !isCollapsed && "rotate-90")}
-                  />
-                </button>
-                <Icon name={tpl.icon} className="w-3.5 h-3.5" style={{ color: tpl.color }} />
-                <span className="text-sm font-medium flex-1 truncate">{tpl.name}</span>
-                <span className="text-[10px] text-sidebar-foreground/40 mr-1">{docs.length}</span>
-                <button
-                  onClick={() => createDocument(tpl.id, "Novo " + tpl.name.replace(/s$/, ""))}
-                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-sidebar-accent text-sidebar-foreground/70"
-                  title="Nova entrada"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <AnimatePresence initial={false}>
-                {!isCollapsed && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                    className="overflow-hidden pl-6"
-                  >
-                    {docs.length === 0 && (
-                      <div className="text-[11px] text-sidebar-foreground/40 italic px-2 py-1">Sem entradas</div>
-                    )}
-                    {docs.map((d) => (
-                      <div key={d.id} className="group flex items-center gap-1.5 rounded-md hover:bg-sidebar-accent">
-                        <button
-                          onClick={() => openTab(d.id)}
-                          className={cn(
-                            "flex-1 text-left px-2 py-1 text-sm truncate text-sidebar-foreground/80 hover:text-sidebar-foreground",
-                            state.activeTab === d.id && state.view === "document" && "text-primary font-medium",
-                          )}
-                        >
-                          {d.title}
-                        </button>
-                        <button
-                          onClick={async () => {
-                            const ok = await confirm({
-                              title: `Excluir "${d.title}"?`,
-                              description: "Esta ação não pode ser desfeita.",
-                              confirmText: "Excluir",
-                              destructive: true,
-                            });
-                            if (ok) deleteDocument(d.id);
-                          }}
-                          className="opacity-0 group-hover:opacity-100 px-1 text-sidebar-foreground/50 hover:text-destructive"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          );
-        })}
+        {grouped.childrenOf(null).map((tpl) => (
+          <TemplateNode
+            key={tpl.id}
+            tpl={tpl}
+            depth={0}
+            collapsed={collapsed}
+            setCollapsed={setCollapsed}
+            childrenOf={grouped.childrenOf}
+            docsFor={grouped.docsFor}
+            activeDocId={state.activeTab}
+            view={state.view}
+            onOpenDoc={openTab}
+            onCreateDoc={(tplId, name) => createDocument(tplId, "Novo " + name.replace(/s$/, ""))}
+            onAddSub={async (parent) => {
+              const name = await prompt({
+                title: `Nova subcategoria em "${parent.name}"`,
+                placeholder: "Nome da subcategoria",
+                confirmText: "Criar",
+              });
+              if (name?.trim()) createTemplate(name.trim(), parent.icon, parent.id);
+            }}
+            onDeleteDoc={async (d) => {
+              const ok = await confirm({
+                title: `Excluir "${d.title}"?`,
+                description: "Esta ação não pode ser desfeita.",
+                confirmText: "Excluir",
+                destructive: true,
+              });
+              if (ok) deleteDocument(d.id);
+            }}
+          />
+        ))}
 
         <Button
           variant="ghost"
@@ -288,5 +253,109 @@ export function Sidebar({
         </DialogContent>
       </Dialog>
     </aside>
+  );
+}
+
+function TemplateNode({
+  tpl, depth, collapsed, setCollapsed, childrenOf, docsFor,
+  activeDocId, view, onOpenDoc, onCreateDoc, onAddSub, onDeleteDoc,
+}: {
+  tpl: Template;
+  depth: number;
+  collapsed: Record<string, boolean>;
+  setCollapsed: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  childrenOf: (parentId: string | null) => Template[];
+  docsFor: (tplId: string) => DocumentEntry[];
+  activeDocId: string | null;
+  view: WorkspaceState["view"];
+  onOpenDoc: (id: string) => void;
+  onCreateDoc: (tplId: string, name: string) => void;
+  onAddSub: (parent: Template) => void;
+  onDeleteDoc: (d: DocumentEntry) => void;
+}) {
+  const isCollapsed = collapsed[tpl.id];
+  const docs = docsFor(tpl.id);
+  const subs = childrenOf(tpl.id);
+  return (
+    <div className="mb-0.5" style={{ paddingLeft: depth * 10 }}>
+      <div className="group flex items-center gap-1 px-1.5 py-1 rounded-md hover:bg-sidebar-accent/50">
+        <button
+          onClick={() => setCollapsed((c) => ({ ...c, [tpl.id]: !c[tpl.id] }))}
+          className="p-0.5"
+        >
+          <ChevronRight
+            className={cn("w-3.5 h-3.5 text-sidebar-foreground/50 transition-transform", !isCollapsed && "rotate-90")}
+          />
+        </button>
+        <Icon name={tpl.icon} className="w-3.5 h-3.5" style={{ color: tpl.color }} />
+        <span className="text-sm font-medium flex-1 truncate">{tpl.name}</span>
+        <span className="text-[10px] text-sidebar-foreground/40 mr-1">{docs.length}</span>
+        <button
+          onClick={() => onAddSub(tpl)}
+          className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-sidebar-accent text-sidebar-foreground/70"
+          title="Nova subcategoria"
+        >
+          <FolderPlus className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={() => onCreateDoc(tpl.id, tpl.name)}
+          className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-sidebar-accent text-sidebar-foreground/70"
+          title="Nova entrada"
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <AnimatePresence initial={false}>
+        {!isCollapsed && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="overflow-hidden pl-6"
+          >
+            {subs.map((s) => (
+              <TemplateNode
+                key={s.id}
+                tpl={s}
+                depth={depth + 1}
+                collapsed={collapsed}
+                setCollapsed={setCollapsed}
+                childrenOf={childrenOf}
+                docsFor={docsFor}
+                activeDocId={activeDocId}
+                view={view}
+                onOpenDoc={onOpenDoc}
+                onCreateDoc={onCreateDoc}
+                onAddSub={onAddSub}
+                onDeleteDoc={onDeleteDoc}
+              />
+            ))}
+            {docs.length === 0 && subs.length === 0 && (
+              <div className="text-[11px] text-sidebar-foreground/40 italic px-2 py-1">Sem entradas</div>
+            )}
+            {docs.map((d) => (
+              <div key={d.id} className="group flex items-center gap-1.5 rounded-md hover:bg-sidebar-accent">
+                <button
+                  onClick={() => onOpenDoc(d.id)}
+                  className={cn(
+                    "flex-1 text-left px-2 py-1 text-sm truncate text-sidebar-foreground/80 hover:text-sidebar-foreground",
+                    activeDocId === d.id && view === "document" && "text-primary font-medium",
+                  )}
+                >
+                  {d.title}
+                </button>
+                <button
+                  onClick={() => onDeleteDoc(d)}
+                  className="opacity-0 group-hover:opacity-100 px-1 text-sidebar-foreground/50 hover:text-destructive"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
