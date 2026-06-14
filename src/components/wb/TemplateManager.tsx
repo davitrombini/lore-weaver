@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,7 +61,7 @@ export function TemplateManager({ open, onOpenChange, onOpenLibrary }: { open: b
           {/* List */}
           <div className="w-60 border-r border-border bg-muted/30 p-3 overflow-auto">
             {(() => {
-              const renderList = (parentId: string | null, depth: number): React.ReactNode[] => {
+              const renderList = (parentId: string | null, depth: number): ReactNode[] => {
                 return state.templates
                   .filter((t) => (t.parentId ?? null) === parentId)
                   .flatMap((t) => [
