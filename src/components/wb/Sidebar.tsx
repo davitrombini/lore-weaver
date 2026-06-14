@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useModals } from "./confirm";
 import type { ProjectMeta } from "@/lib/worldbuilder/types";
+import type { Template, DocumentEntry, WorkspaceState } from "@/lib/worldbuilder/types";
 
 interface Props {
   project: ProjectMeta;
@@ -253,5 +254,109 @@ export function Sidebar({
         </DialogContent>
       </Dialog>
     </aside>
+  );
+}
+
+function TemplateNode({
+  tpl, depth, collapsed, setCollapsed, childrenOf, docsFor,
+  activeDocId, view, onOpenDoc, onCreateDoc, onAddSub, onDeleteDoc,
+}: {
+  tpl: Template;
+  depth: number;
+  collapsed: Record<string, boolean>;
+  setCollapsed: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  childrenOf: (parentId: string | null) => Template[];
+  docsFor: (tplId: string) => DocumentEntry[];
+  activeDocId: string | null;
+  view: WorkspaceState["view"];
+  onOpenDoc: (id: string) => void;
+  onCreateDoc: (tplId: string, name: string) => void;
+  onAddSub: (parent: Template) => void;
+  onDeleteDoc: (d: DocumentEntry) => void;
+}) {
+  const isCollapsed = collapsed[tpl.id];
+  const docs = docsFor(tpl.id);
+  const subs = childrenOf(tpl.id);
+  return (
+    <div className="mb-0.5" style={{ paddingLeft: depth * 10 }}>
+      <div className="group flex items-center gap-1 px-1.5 py-1 rounded-md hover:bg-sidebar-accent/50">
+        <button
+          onClick={() => setCollapsed((c) => ({ ...c, [tpl.id]: !c[tpl.id] }))}
+          className="p-0.5"
+        >
+          <ChevronRight
+            className={cn("w-3.5 h-3.5 text-sidebar-foreground/50 transition-transform", !isCollapsed && "rotate-90")}
+          />
+        </button>
+        <Icon name={tpl.icon} className="w-3.5 h-3.5" style={{ color: tpl.color }} />
+        <span className="text-sm font-medium flex-1 truncate">{tpl.name}</span>
+        <span className="text-[10px] text-sidebar-foreground/40 mr-1">{docs.length}</span>
+        <button
+          onClick={() => onAddSub(tpl)}
+          className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-sidebar-accent text-sidebar-foreground/70"
+          title="Nova subcategoria"
+        >
+          <FolderPlus className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={() => onCreateDoc(tpl.id, tpl.name)}
+          className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-sidebar-accent text-sidebar-foreground/70"
+          title="Nova entrada"
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <AnimatePresence initial={false}>
+        {!isCollapsed && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="overflow-hidden pl-6"
+          >
+            {subs.map((s) => (
+              <TemplateNode
+                key={s.id}
+                tpl={s}
+                depth={depth + 1}
+                collapsed={collapsed}
+                setCollapsed={setCollapsed}
+                childrenOf={childrenOf}
+                docsFor={docsFor}
+                activeDocId={activeDocId}
+                view={view}
+                onOpenDoc={onOpenDoc}
+                onCreateDoc={onCreateDoc}
+                onAddSub={onAddSub}
+                onDeleteDoc={onDeleteDoc}
+              />
+            ))}
+            {docs.length === 0 && subs.length === 0 && (
+              <div className="text-[11px] text-sidebar-foreground/40 italic px-2 py-1">Sem entradas</div>
+            )}
+            {docs.map((d) => (
+              <div key={d.id} className="group flex items-center gap-1.5 rounded-md hover:bg-sidebar-accent">
+                <button
+                  onClick={() => onOpenDoc(d.id)}
+                  className={cn(
+                    "flex-1 text-left px-2 py-1 text-sm truncate text-sidebar-foreground/80 hover:text-sidebar-foreground",
+                    activeDocId === d.id && view === "document" && "text-primary font-medium",
+                  )}
+                >
+                  {d.title}
+                </button>
+                <button
+                  onClick={() => onDeleteDoc(d)}
+                  className="opacity-0 group-hover:opacity-100 px-1 text-sidebar-foreground/50 hover:text-destructive"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
