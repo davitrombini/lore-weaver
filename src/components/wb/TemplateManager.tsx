@@ -10,6 +10,19 @@ import type { FieldType, Template } from "@/lib/worldbuilder/types";
 import { cn } from "@/lib/utils";
 import { useModals } from "./confirm";
 
+// Prevent cycles: returns true if `candidateAncestorId` is a descendant of `templateId`.
+function isDescendant(templates: Template[], candidateAncestorId: string, templateId: string): boolean {
+  let cur: string | null | undefined = candidateAncestorId;
+  const seen = new Set<string>();
+  while (cur) {
+    if (cur === templateId) return true;
+    if (seen.has(cur)) return false;
+    seen.add(cur);
+    cur = templates.find((t) => t.id === cur)?.parentId ?? null;
+  }
+  return false;
+}
+
 const FIELD_TYPES: { value: FieldType; label: string }[] = [
   { value: "text", label: "Texto Curto" },
   { value: "richtext", label: "Texto Rico" },
@@ -47,20 +60,29 @@ export function TemplateManager({ open, onOpenChange, onOpenLibrary }: { open: b
         <div className="flex flex-1 min-h-0">
           {/* List */}
           <div className="w-60 border-r border-border bg-muted/30 p-3 overflow-auto">
-            {state.templates.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setSelectedId(t.id)}
-                className={cn(
-                  "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm mb-0.5",
-                  selectedId === t.id ? "bg-accent text-accent-foreground" : "hover:bg-accent/50",
-                )}
-              >
-                <Icon name={t.icon} className="w-4 h-4" style={{ color: t.color }} />
-                <span className="truncate flex-1 text-left">{t.name}</span>
-                <span className="text-[10px] text-muted-foreground">{t.fields.length}</span>
-              </button>
-            ))}
+            {(() => {
+              const renderList = (parentId: string | null, depth: number): React.ReactNode[] => {
+                return state.templates
+                  .filter((t) => (t.parentId ?? null) === parentId)
+                  .flatMap((t) => [
+                    <button
+                      key={t.id}
+                      onClick={() => setSelectedId(t.id)}
+                      style={{ paddingLeft: 8 + depth * 14 }}
+                      className={cn(
+                        "w-full flex items-center gap-2 pr-2 py-1.5 rounded-md text-sm mb-0.5",
+                        selectedId === t.id ? "bg-accent text-accent-foreground" : "hover:bg-accent/50",
+                      )}
+                    >
+                      <Icon name={t.icon} className="w-4 h-4" style={{ color: t.color }} />
+                      <span className="truncate flex-1 text-left">{t.name}</span>
+                      <span className="text-[10px] text-muted-foreground">{t.fields.length}</span>
+                    </button>,
+                    ...renderList(t.id, depth + 1),
+                  ]);
+              };
+              return renderList(null, 0);
+            })()}
             <Button
               variant="outline"
               size="sm"
@@ -165,6 +187,22 @@ function TemplateEditor({
                 <div className="flex items-center gap-2"><Icon name={n} className="w-3.5 h-3.5" /> {n}</div>
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={template.parentId ?? "__none"}
+          onValueChange={(v) => onUpdate({ ...template, parentId: v === "__none" ? null : v })}
+        >
+          <SelectTrigger className="w-44"><SelectValue placeholder="Categoria pai" /></SelectTrigger>
+          <SelectContent className="max-h-64">
+            <SelectItem value="__none">Sem categoria pai</SelectItem>
+            {state.templates
+              .filter((t) => t.id !== template.id && !isDescendant(state.templates, t.id, template.id))
+              .map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  <div className="flex items-center gap-2"><Icon name={t.icon} className="w-3.5 h-3.5" style={{ color: t.color }} /> {t.name}</div>
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
         <Button variant="ghost" size="sm" onClick={onDelete} className="ml-auto text-destructive hover:text-destructive">
