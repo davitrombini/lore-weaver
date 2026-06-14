@@ -13,8 +13,7 @@ import { Icon, ICON_CHOICES } from "./icons";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useModals } from "./confirm";
-import type { ProjectMeta } from "@/lib/worldbuilder/types";
-import type { Template, DocumentEntry, WorkspaceState } from "@/lib/worldbuilder/types";
+import type { ProjectMeta, Template, DocumentEntry, WorkspaceState } from "@/lib/worldbuilder/types";
 
 interface Props {
   project: ProjectMeta;
