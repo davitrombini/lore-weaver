@@ -121,7 +121,13 @@ export function DocumentView({ doc }: { doc: DocumentEntry }) {
   const visibleFields = !edit && hideEmpty ? tpl.fields.filter((f) => !isEmpty(f)) : tpl.fields;
 
   return (
-    <div className="h-full overflow-auto">
+    <div
+      className="h-full overflow-auto"
+      style={{
+        background: tpl.bgColor,
+        color: tpl.textColor,
+      }}
+    >
       {/* Hero */}
       <div className="relative">
         {heroImage ? (
