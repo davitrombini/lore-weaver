@@ -22,6 +22,8 @@ export interface Template {
   name: string;
   icon: string; // lucide icon name
   color?: string;
+  textColor?: string;
+  bgColor?: string;
   fields: FieldDef[];
   parentId?: string | null; // for sub-categories (nested templates)
 }

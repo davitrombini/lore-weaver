@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   ChevronRight, Plus, Search, Settings2, Trash2, Network, Clock, Map as MapIcon,
-  ArrowLeft, Download, Library, MoreVertical, Pencil, EyeOff, Eye, FolderPlus,
+  ArrowLeft, Download, Library, MoreVertical, Pencil, EyeOff, Eye, FolderPlus, Sliders, HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -24,11 +24,12 @@ interface Props {
   onOpenCommand: () => void;
   onOpenTemplates: () => void;
   onOpenLibrary: () => void;
+  onOpenTutorial: () => void;
 }
 
 export function Sidebar({
   project, onExit, onRename, onIconChange, onExport,
-  onOpenCommand, onOpenTemplates, onOpenLibrary,
+  onOpenCommand, onOpenTemplates, onOpenLibrary, onOpenTutorial,
 }: Props) {
   const { state, openTab, createDocument, deleteDocument, setView, setActiveTab, setSettings, createTemplate } = useWorld();
   const { confirm, prompt } = useModals();
@@ -104,6 +105,9 @@ export function Sidebar({
               <Download className="w-3.5 h-3.5 mr-2" /> Exportar projeto
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onOpenTutorial}>
+              <HelpCircle className="w-3.5 h-3.5 mr-2" /> Tutorial
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setSettings({ hideEmptyFields: !hideEmpty })}>
               {hideEmpty ? <Eye className="w-3.5 h-3.5 mr-2" /> : <EyeOff className="w-3.5 h-3.5 mr-2" />}
               {hideEmpty ? "Mostrar campos vazios" : "Ocultar campos vazios"}
@@ -199,6 +203,7 @@ export function Sidebar({
               });
               if (ok) deleteDocument(d.id);
             }}
+            onOpenTemplateManager={onOpenTemplates}
           />
         ))}
 
@@ -258,7 +263,7 @@ export function Sidebar({
 
 function TemplateNode({
   tpl, depth, collapsed, setCollapsed, childrenOf, docsFor,
-  activeDocId, view, onOpenDoc, onCreateDoc, onAddSub, onDeleteDoc,
+  activeDocId, view, onOpenDoc, onCreateDoc, onAddSub, onDeleteDoc, onOpenTemplateManager,
 }: {
   tpl: Template;
   depth: number;
@@ -272,6 +277,7 @@ function TemplateNode({
   onCreateDoc: (tplId: string, name: string) => void;
   onAddSub: (parent: Template) => void;
   onDeleteDoc: (d: DocumentEntry) => void;
+  onOpenTemplateManager: () => void;
 }) {
   const isCollapsed = collapsed[tpl.id];
   const docs = docsFor(tpl.id);
@@ -329,6 +335,7 @@ function TemplateNode({
                 onCreateDoc={onCreateDoc}
                 onAddSub={onAddSub}
                 onDeleteDoc={onDeleteDoc}
+                onOpenTemplateManager={onOpenTemplateManager}
               />
             ))}
             {docs.length === 0 && subs.length === 0 && (
@@ -344,6 +351,13 @@ function TemplateNode({
                   )}
                 >
                   {d.title}
+                </button>
+                <button
+                  onClick={onOpenTemplateManager}
+                  className="opacity-0 group-hover:opacity-100 px-1 text-sidebar-foreground/50 hover:text-primary"
+                  title="Abrir gerenciador de templates"
+                >
+                  <Sliders className="w-3 h-3" />
                 </button>
                 <button
                   onClick={() => onDeleteDoc(d)}

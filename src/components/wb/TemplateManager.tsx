@@ -173,12 +173,24 @@ function TemplateEditor({
           onChange={(e) => onUpdate({ ...template, name: e.target.value })}
           className="text-lg font-medium max-w-xs"
         />
-        <Input
-          type="color"
-          value={template.color ?? "#999999"}
-          onChange={(e) => onUpdate({ ...template, color: e.target.value })}
-          className="w-14 h-9 p-1"
-        />
+        <div className="flex items-center gap-1" title="Cor do ícone">
+          <span className="text-[10px] text-muted-foreground">Ícone</span>
+          <Input type="color" value={template.color ?? "#999999"}
+            onChange={(e) => onUpdate({ ...template, color: e.target.value })}
+            className="w-10 h-9 p-1" />
+        </div>
+        <div className="flex items-center gap-1" title="Cor do texto">
+          <span className="text-[10px] text-muted-foreground">Texto</span>
+          <Input type="color" value={template.textColor ?? "#e5e7eb"}
+            onChange={(e) => onUpdate({ ...template, textColor: e.target.value })}
+            className="w-10 h-9 p-1" />
+        </div>
+        <div className="flex items-center gap-1" title="Cor de fundo">
+          <span className="text-[10px] text-muted-foreground">Fundo</span>
+          <Input type="color" value={template.bgColor ?? "#0f172a"}
+            onChange={(e) => onUpdate({ ...template, bgColor: e.target.value })}
+            className="w-10 h-9 p-1" />
+        </div>
         <Select value={template.icon} onValueChange={(v) => onUpdate({ ...template, icon: v })}>
           <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
           <SelectContent className="max-h-64">

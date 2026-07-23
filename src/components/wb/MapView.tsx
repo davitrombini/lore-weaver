@@ -6,9 +6,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useWorld } from "@/lib/worldbuilder/store";
 import { motion } from "framer-motion";
+import { useModals } from "./confirm";
 
 export function MapView() {
-  const { state, addMap, addPin, updatePin, removePin, setActiveMap, openTab } = useWorld();
+  const { state, addMap, addPin, updatePin, removePin, setActiveMap, openTab, deleteMap } = useWorld();
+  const { confirm } = useModals();
   const fileRef = useRef<HTMLInputElement>(null);
   const imgRef = useRef<HTMLDivElement>(null);
   const [newName, setNewName] = useState("");
@@ -43,15 +45,27 @@ export function MapView() {
         <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Mapas</div>
         <div className="space-y-1 mb-4">
           {state.maps.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => setActiveMap(m.id)}
-              className={`w-full text-left px-2 py-1.5 rounded-md text-sm ${
-                activeMap?.id === m.id ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
-              }`}
-            >
-              {m.name}
-            </button>
+            <div key={m.id} className={`group flex items-center gap-1 rounded-md ${activeMap?.id === m.id ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"}`}>
+              <button
+                onClick={() => setActiveMap(m.id)}
+                className="flex-1 text-left px-2 py-1.5 text-sm truncate"
+              >{m.name}</button>
+              <button
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: `Excluir o mapa "${m.name}"?`,
+                    description: "Todos os pinos deste mapa serão perdidos.",
+                    confirmText: "Excluir",
+                    destructive: true,
+                  });
+                  if (ok) deleteMap(m.id);
+                }}
+                className="opacity-0 group-hover:opacity-100 px-1.5 py-1 text-muted-foreground hover:text-destructive"
+                title="Excluir mapa"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
           ))}
           {state.maps.length === 0 && (
             <div className="text-xs italic text-muted-foreground">Nenhum mapa ainda</div>

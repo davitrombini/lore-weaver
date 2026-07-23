@@ -20,6 +20,7 @@ type Action =
   | { type: "setView"; view: WorkspaceState["view"] }
   | { type: "addMap"; map: WorldMap }
   | { type: "updateMap"; id: string; patch: Partial<WorldMap> }
+  | { type: "deleteMap"; id: string }
   | { type: "setActiveMap"; id: string | null }
   | { type: "setSettings"; patch: Partial<NonNullable<WorkspaceState["settings"]>> };
 
@@ -98,6 +99,12 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
         ...state,
         maps: state.maps.map((m) => (m.id === action.id ? { ...m, ...action.patch } : m)),
       };
+    case "deleteMap":
+      return {
+        ...state,
+        maps: state.maps.filter((m) => m.id !== action.id),
+        activeMapId: state.activeMapId === action.id ? null : state.activeMapId,
+      };
     case "setActiveMap":
       return { ...state, activeMapId: action.id };
     case "setSettings":
@@ -128,6 +135,7 @@ interface Ctx {
   // maps
   addMap: (name: string, image: string) => WorldMap;
   updateMap: (id: string, patch: Partial<WorldMap>) => void;
+  deleteMap: (id: string) => void;
   addPin: (mapId: string, pin: Omit<MapPin, "id">) => void;
   removePin: (mapId: string, pinId: string) => void;
   updatePin: (mapId: string, pinId: string, patch: Partial<MapPin>) => void;
@@ -255,6 +263,8 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
     [],
   );
 
+  const deleteMap = useCallback((id: string) => dispatch({ type: "deleteMap", id }), []);
+
   const addPin = useCallback(
     (mapId: string, pin: Omit<MapPin, "id">) => {
       const m = state.maps.find((x) => x.id === mapId);
@@ -303,10 +313,10 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
       createDocument, updateDocument, deleteDocument,
       openTab, closeTab, setActiveTab,
       setView,
-      addMap, updateMap, addPin, removePin, updatePin, setActiveMap,
+      addMap, updateMap, deleteMap, addPin, removePin, updatePin, setActiveMap,
       setSettings, replaceState,
     }),
-    [state, createTemplate, updateTemplate, deleteTemplate, addField, removeField, updateField, moveField, createDocument, updateDocument, deleteDocument, openTab, closeTab, setActiveTab, setView, addMap, updateMap, addPin, removePin, updatePin, setActiveMap, setSettings, replaceState],
+    [state, createTemplate, updateTemplate, deleteTemplate, addField, removeField, updateField, moveField, createDocument, updateDocument, deleteDocument, openTab, closeTab, setActiveTab, setView, addMap, updateMap, deleteMap, addPin, removePin, updatePin, setActiveMap, setSettings, replaceState],
   );
 
   return <WorldCtx.Provider value={value}>{children}</WorldCtx.Provider>;

@@ -375,3 +375,184 @@ export const TEMPLATE_LIBRARY: (Template & { description: string; category: stri
 ];
 
 export const LIBRARY_CATEGORIES = Array.from(new Set(TEMPLATE_LIBRARY.map((t) => t.category)));
+
+// ================================================================
+// SCI-FI COLLECTION
+// ================================================================
+export const SCIFI_LIBRARY: (Template & { description: string; category: string })[] = [
+  {
+    id: "sf_character", name: "Personagens", icon: "User", color: "#38bdf8",
+    category: "Tripulação", description: "Membros de tripulação, cientistas e ciborgues.",
+    fields: [
+      { id: "f1", name: "Retrato", type: "image" },
+      { id: "f2", name: "Espécie", type: "text" },
+      { id: "f3", name: "Patente", type: "text" },
+      { id: "f4", name: "Facção", type: "relationship" },
+      { id: "f5", name: "Implantes", type: "richtext" },
+      { id: "f6", name: "Habilidades", type: "richtext" },
+      { id: "f7", name: "Biografia", type: "richtext" },
+    ],
+  },
+  {
+    id: "sf_planet", name: "Planetas", icon: "Globe", color: "#8b5cf6",
+    category: "Astronomia", description: "Mundos habitáveis, colônias e planetas alienígenas.",
+    fields: [
+      { id: "f1", name: "Imagem", type: "image" },
+      { id: "f2", name: "Sistema Estelar", type: "text" },
+      { id: "f3", name: "Gravidade", type: "text" },
+      { id: "f4", name: "Atmosfera", type: "text" },
+      { id: "f5", name: "Habitável", type: "boolean" },
+      { id: "f6", name: "População", type: "number" },
+      { id: "f7", name: "Governo", type: "text" },
+      { id: "f8", name: "Recursos", type: "richtext" },
+      { id: "f9", name: "História", type: "richtext" },
+    ],
+  },
+  {
+    id: "sf_ship", name: "Naves", icon: "Anchor", color: "#22d3ee",
+    category: "Frota", description: "Naves espaciais e estações orbitais.",
+    fields: [
+      { id: "f1", name: "Imagem", type: "image" },
+      { id: "f2", name: "Classe", type: "text" },
+      { id: "f3", name: "Comprimento", type: "text" },
+      { id: "f4", name: "Tripulação", type: "number" },
+      { id: "f5", name: "Armamento", type: "richtext" },
+      { id: "f6", name: "Motor", type: "text" },
+      { id: "f7", name: "Capitão", type: "relationship" },
+      { id: "f8", name: "Facção", type: "relationship" },
+    ],
+  },
+  {
+    id: "sf_alien", name: "Espécies Alienígenas", icon: "Skull", color: "#4ade80",
+    category: "Xenobiologia", description: "Formas de vida extraterrestre.",
+    fields: [
+      { id: "f1", name: "Imagem", type: "image" },
+      { id: "f2", name: "Planeta Natal", type: "relationship" },
+      { id: "f3", name: "Nível Tecnológico", type: "select", options: ["Pré-industrial","Industrial","Espacial","Interestelar","Transcendente"] },
+      { id: "f4", name: "Fisiologia", type: "richtext" },
+      { id: "f5", name: "Sociedade", type: "richtext" },
+      { id: "f6", name: "Diplomacia", type: "richtext" },
+    ],
+  },
+  {
+    id: "sf_tech", name: "Tecnologias", icon: "Sparkles", color: "#facc15",
+    category: "Ciência", description: "Invenções, dispositivos e ciência avançada.",
+    fields: [
+      { id: "f1", name: "Categoria", type: "select", options: ["Armamento","Propulsão","Comunicação","Médica","Cibernética","IA","Terraformação"] },
+      { id: "f2", name: "Inventor", type: "relationship" },
+      { id: "f3", name: "Disponibilidade", type: "select", options: ["Protótipo","Militar","Corporativa","Civil","Proibida"] },
+      { id: "f4", name: "Descrição", type: "richtext" },
+      { id: "f5", name: "Impacto", type: "richtext" },
+    ],
+  },
+  {
+    id: "sf_faction", name: "Corporações", icon: "Shield", color: "#f472b6",
+    category: "Poder", description: "Megacorporações, impérios e sindicatos.",
+    fields: [
+      { id: "f1", name: "Logo", type: "image" },
+      { id: "f2", name: "Setor", type: "text" },
+      { id: "f3", name: "CEO / Líder", type: "relationship" },
+      { id: "f4", name: "Sede", type: "relationship" },
+      { id: "f5", name: "Influência", type: "select", options: ["Local","Planetária","Sistêmica","Interestelar","Galáctica"] },
+      { id: "f6", name: "História", type: "richtext" },
+    ],
+  },
+  {
+    id: "sf_mission", name: "Missões", icon: "Compass", color: "#fb923c",
+    category: "Operações", description: "Contratos, operações e exploração.",
+    fields: [
+      { id: "f1", name: "Cliente", type: "relationship" },
+      { id: "f2", name: "Recompensa", type: "text" },
+      { id: "f3", name: "Nível de Risco", type: "select", options: ["Baixo","Médio","Alto","Extremo","Suicida"] },
+      { id: "f4", name: "Status", type: "select", options: ["Disponível","Em Andamento","Concluída","Falhada"] },
+      { id: "f5", name: "Objetivos", type: "richtext" },
+      { id: "f6", name: "Briefing", type: "richtext" },
+    ],
+  },
+];
+
+// ================================================================
+// MODERN / URBAN COLLECTION
+// ================================================================
+export const MODERN_LIBRARY: (Template & { description: string; category: string })[] = [
+  {
+    id: "md_character", name: "Personagens", icon: "User", color: "#f87171",
+    category: "Elenco", description: "Protagonistas, contatos e alvos.",
+    fields: [
+      { id: "f1", name: "Foto", type: "image" },
+      { id: "f2", name: "Idade", type: "number" },
+      { id: "f3", name: "Ocupação", type: "text" },
+      { id: "f4", name: "Nacionalidade", type: "text" },
+      { id: "f5", name: "Telefone", type: "text" },
+      { id: "f6", name: "Endereço", type: "text" },
+      { id: "f7", name: "Perfil Psicológico", type: "richtext" },
+      { id: "f8", name: "Histórico", type: "richtext" },
+      { id: "f9", name: "Contatos", type: "relationship", multi: true },
+    ],
+  },
+  {
+    id: "md_location", name: "Locais", icon: "MapPin", color: "#a78bfa",
+    category: "Cenários", description: "Cidades, prédios e pontos de encontro.",
+    fields: [
+      { id: "f1", name: "Foto", type: "image" },
+      { id: "f2", name: "Endereço", type: "text" },
+      { id: "f3", name: "Cidade", type: "text" },
+      { id: "f4", name: "País", type: "text" },
+      { id: "f5", name: "Tipo", type: "select", options: ["Residencial","Comercial","Industrial","Governamental","Público","Secreto"] },
+      { id: "f6", name: "Descrição", type: "richtext" },
+    ],
+  },
+  {
+    id: "md_organization", name: "Organizações", icon: "Crown", color: "#facc15",
+    category: "Poder", description: "Empresas, agências e grupos criminosos.",
+    fields: [
+      { id: "f1", name: "Logo", type: "image" },
+      { id: "f2", name: "Tipo", type: "select", options: ["Empresa","Agência","Máfia","ONG","Culto","Governo"] },
+      { id: "f3", name: "Líder", type: "relationship" },
+      { id: "f4", name: "Sede", type: "relationship" },
+      { id: "f5", name: "Legalidade", type: "select", options: ["Legal","Cinza","Ilegal"] },
+      { id: "f6", name: "Descrição", type: "richtext" },
+    ],
+  },
+  {
+    id: "md_case", name: "Casos", icon: "Scroll", color: "#22d3ee",
+    category: "Investigação", description: "Investigações, crimes e mistérios.",
+    fields: [
+      { id: "f1", name: "Data", type: "date" },
+      { id: "f2", name: "Status", type: "select", options: ["Aberto","Em Andamento","Encerrado","Arquivado"] },
+      { id: "f3", name: "Local", type: "relationship" },
+      { id: "f4", name: "Envolvidos", type: "relationship", multi: true },
+      { id: "f5", name: "Evidências", type: "richtext" },
+      { id: "f6", name: "Notas", type: "richtext" },
+    ],
+  },
+  {
+    id: "md_item", name: "Itens & Equipamentos", icon: "Gem", color: "#4ade80",
+    category: "Recursos", description: "Armas, veículos e gadgets.",
+    fields: [
+      { id: "f1", name: "Foto", type: "image" },
+      { id: "f2", name: "Categoria", type: "select", options: ["Arma","Veículo","Gadget","Documento","Droga","Outros"] },
+      { id: "f3", name: "Proprietário", type: "relationship" },
+      { id: "f4", name: "Valor", type: "number" },
+      { id: "f5", name: "Descrição", type: "richtext" },
+    ],
+  },
+  {
+    id: "md_event", name: "Eventos", icon: "Clock", color: "#fb923c",
+    category: "Cronologia", description: "Acontecimentos, encontros e reuniões.",
+    fields: [
+      { id: "f1", name: "Data", type: "date" },
+      { id: "f2", name: "Local", type: "relationship" },
+      { id: "f3", name: "Participantes", type: "relationship", multi: true },
+      { id: "f4", name: "Resumo", type: "richtext" },
+    ],
+  },
+];
+
+export type LibraryTemplate = Template & { description: string; category: string };
+
+export const TEMPLATE_COLLECTIONS: { id: string; name: string; description: string; templates: LibraryTemplate[] }[] = [
+  { id: "fantasy", name: "Fantasia & RPG", description: "Personagens, magia, reinos e criaturas para mundos de fantasia clássica.", templates: TEMPLATE_LIBRARY as LibraryTemplate[] },
+  { id: "scifi", name: "Ficção Científica", description: "Naves, planetas, alienígenas e alta tecnologia para universos de sci-fi.", templates: SCIFI_LIBRARY },
+  { id: "modern", name: "Moderno / Urbano", description: "Personagens, casos e cenários para histórias contemporâneas ou noir.", templates: MODERN_LIBRARY },
+];
