@@ -60,10 +60,7 @@ function inlineMd(s: string): string {
 
 export function renderRichText(src: string): string {
   if (!src) return "";
-  // If the value already looks like HTML (from legacy contentEditable saves), keep it.
-  const looksHtml = /<(p|div|br|span|strong|em|h1|h2|h3|ul|ol|li|img|a)\b/i.test(src);
-  const raw = looksHtml ? src.replace(/<[^>]+>/g, (t) => t) : escape(src);
-  const lines = raw.split(/\r?\n/);
+  const lines = escape(src).split(/\r?\n/);
   const out: string[] = [];
   let inList: "ul" | "ol" | null = null;
   const closeList = () => { if (inList) { out.push(`</${inList}>`); inList = null; } };
