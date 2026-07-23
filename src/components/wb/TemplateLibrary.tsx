@@ -2,29 +2,38 @@ import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Check } from "lucide-react";
-import { TEMPLATE_LIBRARY, LIBRARY_CATEGORIES } from "@/lib/worldbuilder/templateLibrary";
+import { Plus, Search, Check, PackagePlus } from "lucide-react";
+import { TEMPLATE_COLLECTIONS } from "@/lib/worldbuilder/templateLibrary";
 import { useWorld } from "@/lib/worldbuilder/store";
 import { Icon } from "./icons";
 import { cn } from "@/lib/utils";
+import { useModals } from "./confirm";
 
 export function TemplateLibrary({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const { createTemplate, addField, updateTemplate, state } = useWorld();
+  const { confirm } = useModals();
   const [query, setQuery] = useState("");
   const [activeCat, setActiveCat] = useState<string>("Todos");
+  const [collectionId, setCollectionId] = useState<string>(TEMPLATE_COLLECTIONS[0].id);
   const [added, setAdded] = useState<Record<string, boolean>>({});
+
+  const collection = TEMPLATE_COLLECTIONS.find((c) => c.id === collectionId) ?? TEMPLATE_COLLECTIONS[0];
+  const categories = useMemo(
+    () => Array.from(new Set(collection.templates.map((t) => t.category))),
+    [collection],
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return TEMPLATE_LIBRARY.filter((t) => {
+    return collection.templates.filter((t) => {
       const matchesCat = activeCat === "Todos" || t.category === activeCat;
       const matchesQ = !q || t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.category.toLowerCase().includes(q);
       return matchesCat && matchesQ;
     });
-  }, [query, activeCat]);
+  }, [query, activeCat, collection]);
 
   const addToProject = (libId: string) => {
-    const lib = TEMPLATE_LIBRARY.find((t) => t.id === libId);
+    const lib = collection.templates.find((t) => t.id === libId);
     if (!lib) return;
     const created = createTemplate(lib.name, lib.icon);
     updateTemplate({ ...created, color: lib.color });
@@ -34,21 +43,59 @@ export function TemplateLibrary({ open, onOpenChange }: { open: boolean; onOpenC
     setAdded((s) => ({ ...s, [libId]: true }));
     setTimeout(() => setAdded((s) => { const c = { ...s }; delete c[libId]; return c; }), 1500);
   };
+
+  const importAll = async () => {
+    const ok = await confirm({
+      title: `Importar todos os ${collection.templates.length} templates de "${collection.name}"?`,
+      description: "Cada template será adicionado ao projeto como uma nova categoria.",
+      confirmText: "Importar todos",
+    });
+    if (!ok) return;
+    for (const lib of collection.templates) {
+      const created = createTemplate(lib.name, lib.icon);
+      updateTemplate({ ...created, color: lib.color });
+      for (const f of lib.fields) {
+        addField(created.id, { name: f.name, type: f.type, options: f.options, multi: f.multi, targetTemplateId: f.targetTemplateId });
+      }
+    }
+  };
   void state;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl p-0 overflow-hidden h-[640px] flex flex-col">
         <DialogHeader className="px-6 pt-5 pb-3 border-b border-border">
-          <DialogTitle>Biblioteca de Templates</DialogTitle>
+          <div className="flex items-center justify-between gap-3">
+            <DialogTitle>Biblioteca de Templates</DialogTitle>
+            <Button size="sm" variant="outline" onClick={importAll} className="gap-1.5">
+              <PackagePlus className="w-3.5 h-3.5" /> Importar Biblioteca Toda
+            </Button>
+          </div>
         </DialogHeader>
+        <div className="px-6 pt-3 pb-3 border-b border-border">
+          <div className="flex gap-1.5">
+            {TEMPLATE_COLLECTIONS.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => { setCollectionId(c.id); setActiveCat("Todos"); }}
+                className={cn(
+                  "text-xs px-3 py-1.5 rounded-lg border transition-colors flex-1",
+                  collectionId === c.id
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted/40 text-muted-foreground border-border hover:text-foreground hover:bg-muted",
+                )}
+              >{c.name}</button>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-2">{collection.description}</p>
+        </div>
         <div className="px-6 pt-4 pb-3 border-b border-border space-y-3">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar templates…" className="pl-9" />
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {["Todos", ...LIBRARY_CATEGORIES].map((cat) => (
+            {["Todos", ...categories].map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCat(cat)}
