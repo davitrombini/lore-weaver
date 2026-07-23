@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useWorld } from "@/lib/worldbuilder/store";
 import { motion } from "framer-motion";
+import { useModals } from "./confirm";
 
 export function MapView() {
   const { state, addMap, addPin, updatePin, removePin, setActiveMap, openTab, deleteMap } = useWorld();
