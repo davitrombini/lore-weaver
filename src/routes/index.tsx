@@ -10,6 +10,7 @@ import { MapView } from "@/components/wb/MapView";
 import { CommandPalette } from "@/components/wb/CommandPalette";
 import { TemplateManager } from "@/components/wb/TemplateManager";
 import { TemplateLibrary } from "@/components/wb/TemplateLibrary";
+import { TutorialDialog } from "@/components/wb/TutorialDialog";
 import { MainMenu } from "@/components/wb/MainMenu";
 import { ModalsProvider, useModals } from "@/components/wb/confirm";
 import type { ProjectMeta, ProjectsIndex, WorkspaceState } from "@/lib/worldbuilder/types";
@@ -149,6 +150,7 @@ function Shell({ project, onExit, onRename, onIconChange }: ShellProps) {
   const [cmdOpen, setCmdOpen] = useState(false);
   const [tplOpen, setTplOpen] = useState(false);
   const [libOpen, setLibOpen] = useState(false);
+  const [tutOpen, setTutOpen] = useState(false);
   const activeDoc = state.documents.find((d) => d.id === state.activeTab);
 
   const exportProject = useCallback(() => {
@@ -173,6 +175,7 @@ function Shell({ project, onExit, onRename, onIconChange }: ShellProps) {
         onOpenCommand={() => setCmdOpen(true)}
         onOpenTemplates={() => setTplOpen(true)}
         onOpenLibrary={() => setLibOpen(true)}
+        onOpenTutorial={() => setTutOpen(true)}
       />
       <main className="flex-1 min-w-0 flex flex-col">
         <Tabs />
@@ -187,6 +190,7 @@ function Shell({ project, onExit, onRename, onIconChange }: ShellProps) {
       <CommandPalette open={cmdOpen} setOpen={setCmdOpen} onOpenTemplates={() => setTplOpen(true)} />
       <TemplateManager open={tplOpen} onOpenChange={setTplOpen} onOpenLibrary={() => { setTplOpen(false); setLibOpen(true); }} />
       <TemplateLibrary open={libOpen} onOpenChange={setLibOpen} />
+      <TutorialDialog open={tutOpen} onOpenChange={setTutOpen} />
     </div>
   );
 }
