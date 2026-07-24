@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   ChevronRight, Plus, Search, Settings2, Trash2, Network, Clock, Map as MapIcon,
   ArrowLeft, Download, Library, MoreVertical, Pencil, EyeOff, Eye, FolderPlus, Sliders, HelpCircle,
+  Image as ImageIcon, BarChart3, Trash,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -20,6 +21,7 @@ interface Props {
   onExit: () => void;
   onRename: (name: string) => void;
   onIconChange: (icon: string) => void;
+  onIconColorChange: (color: string) => void;
   onExport: () => void;
   onOpenCommand: () => void;
   onOpenTemplates: () => void;
@@ -28,7 +30,7 @@ interface Props {
 }
 
 export function Sidebar({
-  project, onExit, onRename, onIconChange, onExport,
+  project, onExit, onRename, onIconChange, onIconColorChange, onExport,
   onOpenCommand, onOpenTemplates, onOpenLibrary, onOpenTutorial,
 }: Props) {
   const { state, openTab, createDocument, deleteDocument, setView, setActiveTab, setSettings, createTemplate } = useWorld();
@@ -44,7 +46,7 @@ export function Sidebar({
     const lower = filter.toLowerCase();
     const docsFor = (tplId: string) =>
       state.documents
-        .filter((d) => d.templateId === tplId && d.title.toLowerCase().includes(lower))
+        .filter((d) => d.templateId === tplId && !d.deletedAt && d.title.toLowerCase().includes(lower))
         .sort((a, b) => a.title.localeCompare(b.title));
     const childrenOf = (parentId: string | null) =>
       state.templates.filter((t) => (t.parentId ?? null) === parentId);
@@ -81,7 +83,7 @@ export function Sidebar({
           title="Mudar ícone"
           className="w-7 h-7 rounded-md bg-gradient-to-br from-primary/40 to-chart-3/20 border border-sidebar-border flex items-center justify-center hover:from-primary/60 transition-colors"
         >
-          <Icon name={project.icon} className="w-4 h-4 text-primary" />
+          <Icon name={project.icon} className="w-4 h-4" style={{ color: project.iconColor ?? "var(--primary)" }} />
         </button>
         <button
           onClick={() => { setRenameValue(project.name); setRenameOpen(true); }}
@@ -147,6 +149,9 @@ export function Sidebar({
         <ViewBtn v="graph" label="Grafo" icon={Network} />
         <ViewBtn v="timeline" label="Linha do Tempo" icon={Clock} />
         <ViewBtn v="map" label="Mapas" icon={MapIcon} />
+        <ViewBtn v="gallery" label="Galeria" icon={ImageIcon} />
+        <ViewBtn v="stats" label="Estatísticas" icon={BarChart3} />
+        <ViewBtn v="trash" label="Lixeira" icon={Trash} />
       </div>
 
       <div className="h-px bg-sidebar-border mx-3 my-2" />
@@ -242,16 +247,22 @@ export function Sidebar({
       <Dialog open={iconOpen} onOpenChange={setIconOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Ícone do projeto</DialogTitle></DialogHeader>
-          <Select value={project.icon} onValueChange={(v) => { onIconChange(v); }}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent className="max-h-64">
-              {ICON_CHOICES.map((n) => (
-                <SelectItem key={n} value={n}>
-                  <div className="flex items-center gap-2"><Icon name={n} className="w-3.5 h-3.5" /> {n}</div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-3">
+            <Select value={project.icon} onValueChange={(v) => { onIconChange(v); }}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent className="max-h-64">
+                {ICON_CHOICES.map((n) => (
+                  <SelectItem key={n} value={n}>
+                    <div className="flex items-center gap-2"><Icon name={n} className="w-3.5 h-3.5" /> {n}</div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Cor do ícone</span>
+              <Input type="color" value={project.iconColor ?? "#a78bfa"} onChange={(e) => onIconColorChange(e.target.value)} className="w-16 h-9 p-1" />
+            </div>
+          </div>
           <DialogFooter>
             <Button onClick={() => setIconOpen(false)}>Concluir</Button>
           </DialogFooter>
@@ -296,6 +307,13 @@ function TemplateNode({
         <Icon name={tpl.icon} className="w-3.5 h-3.5" style={{ color: tpl.color }} />
         <span className="text-sm font-medium flex-1 truncate">{tpl.name}</span>
         <span className="text-[10px] text-sidebar-foreground/40 mr-1">{docs.length}</span>
+        <button
+          onClick={onOpenTemplateManager}
+          className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-sidebar-accent text-sidebar-foreground/70"
+          title="Editar categoria"
+        >
+          <Sliders className="w-3.5 h-3.5" />
+        </button>
         <button
           onClick={() => onAddSub(tpl)}
           className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-sidebar-accent text-sidebar-foreground/70"
