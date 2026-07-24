@@ -143,3 +143,6 @@
     color: var(--color-foreground);
   }
 }
+
+.wiki-link { color: var(--color-primary); text-decoration: underline; cursor: pointer; }
+.wiki-link.wiki-missing { color: #ef4444; text-decoration: underline dotted; cursor: help; }
