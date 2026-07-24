@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Edit3, Eye, Trash2, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,8 @@ import { Icon } from "./icons";
 import { ImageField } from "./ImageField";
 import { RelationshipField } from "./RelationshipField";
 import { RichTextField } from "./RichTextField";
+import { TableField, type TableValue } from "./TableField";
+import { formatBR } from "@/lib/worldbuilder/dateUtils";
 import type { DocumentEntry, FieldDef, Template } from "@/lib/worldbuilder/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useModals } from "./confirm";
@@ -56,19 +58,27 @@ function FieldEditor({
           onChange={onChange}
         />
       );
+    case "table":
+      return (
+        <TableField
+          columns={field.columns ?? []}
+          value={value}
+          onChange={(v: TableValue) => onChange(v)}
+        />
+      );
   }
 }
 
 function FieldReader({ field, value, onOpen }: { field: FieldDef; value: unknown; onOpen: (id: string) => void }) {
   if (value === undefined || value === null || value === "" || (Array.isArray(value) && !value.length)) {
-    if (field.type !== "boolean") return <div className="text-sm text-muted-foreground italic">Vazio</div>;
+    if (field.type !== "boolean" && field.type !== "table") return <div className="text-sm text-muted-foreground italic">Vazio</div>;
   }
   switch (field.type) {
     case "text":
     case "number":
       return <div className="text-foreground/90">{String(value)}</div>;
     case "date":
-      return <div className="text-foreground/90 tabular-nums">{String(value)}</div>;
+      return <div className="text-foreground/90 tabular-nums">{formatBR(value as string)}</div>;
     case "boolean":
       return (
         <div className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${value ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>
@@ -92,6 +102,8 @@ function FieldReader({ field, value, onOpen }: { field: FieldDef; value: unknown
           readOnly
         />
       );
+    case "table":
+      return <TableField columns={field.columns ?? []} value={value} onChange={() => {}} readOnly />;
   }
 }
 
@@ -101,6 +113,18 @@ export function DocumentView({ doc }: { doc: DocumentEntry }) {
   const tpl = state.templates.find((t) => t.id === doc.templateId) as Template | undefined;
   const [edit, setEdit] = useState(false);
   const hideEmpty = !!state.settings?.hideEmptyFields;
+
+  // Ctrl+Shift+V toggles read/edit for the active document.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "v") {
+        e.preventDefault();
+        setEdit((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const heroImageField = useMemo(() => tpl?.fields.find((f) => f.type === "image"), [tpl]);
   const heroImage = heroImageField ? (doc.values[heroImageField.id] as string | undefined) : undefined;

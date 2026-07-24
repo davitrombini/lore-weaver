@@ -8,7 +8,7 @@ export function CommandPalette({ open, setOpen, onOpenTemplates }: { open: boole
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      if (((e.metaKey || e.ctrlKey) || e.altKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setOpen(!open);
       }
@@ -23,7 +23,7 @@ export function CommandPalette({ open, setOpen, onOpenTemplates }: { open: boole
       <CommandList>
         <CommandEmpty>Nenhum resultado.</CommandEmpty>
         <CommandGroup heading="Documentos">
-          {state.documents.map((d) => {
+          {state.documents.filter((d) => !d.deletedAt).map((d) => {
             const tpl = state.templates.find((t) => t.id === d.templateId);
             return (
               <CommandItem
@@ -54,6 +54,9 @@ export function CommandPalette({ open, setOpen, onOpenTemplates }: { open: boole
           <CommandItem onSelect={() => { setActiveTab(null); setView("graph"); setOpen(false); }}>Grafo</CommandItem>
           <CommandItem onSelect={() => { setActiveTab(null); setView("timeline"); setOpen(false); }}>Linha do Tempo</CommandItem>
           <CommandItem onSelect={() => { setActiveTab(null); setView("map"); setOpen(false); }}>Mapa</CommandItem>
+          <CommandItem onSelect={() => { setActiveTab(null); setView("gallery"); setOpen(false); }}>Galeria</CommandItem>
+          <CommandItem onSelect={() => { setActiveTab(null); setView("stats"); setOpen(false); }}>Estatísticas</CommandItem>
+          <CommandItem onSelect={() => { setActiveTab(null); setView("trash"); setOpen(false); }}>Lixeira</CommandItem>
           <CommandItem onSelect={() => { onOpenTemplates(); setOpen(false); }}>Abrir Gerenciador de Templates</CommandItem>
         </CommandGroup>
       </CommandList>

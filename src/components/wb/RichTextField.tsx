@@ -5,6 +5,24 @@ import { Eye, Edit3, Palette } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { COLOR_CODE_LEGEND } from "@/lib/worldbuilder/richFormat";
 
+function useWikiClicks(ref: React.RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const onClick = (e: MouseEvent) => {
+      const t = e.target as HTMLElement | null;
+      const a = t?.closest("a.wiki-link") as HTMLAnchorElement | null;
+      if (!a) return;
+      const id = a.getAttribute("data-doc-id");
+      if (!id) return;
+      e.preventDefault();
+      window.dispatchEvent(new CustomEvent("void:open-doc", { detail: { id } }));
+    };
+    el.addEventListener("click", onClick);
+    return () => el.removeEventListener("click", onClick);
+  }, [ref]);
+}
+
 interface Props {
   value?: string;
   onChange?: (html: string) => void;
@@ -33,12 +51,17 @@ function legacyHtmlToText(html: string): string {
 export function RichTextField({ value, onChange, readOnly, placeholder }: Props) {
   const [preview, setPreview] = useState(false);
   const areaRef = useRef<HTMLTextAreaElement>(null);
+  const readRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  useWikiClicks(readRef);
+  useWikiClicks(previewRef);
 
   const src = value ? legacyHtmlToText(value) : "";
 
   if (readOnly) {
     return (
       <div
+        ref={readRef}
         className="prose prose-invert max-w-none text-foreground/90 leading-relaxed [&_p]:my-2 [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:mt-4 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:mt-4 [&_h3]:text-lg [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-primary/60 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_a]:text-primary [&_a]:underline [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_hr]:my-3 [&_hr]:border-border"
         dangerouslySetInnerHTML={{
           __html: src ? renderRichText(src) : `<p class="text-muted-foreground italic">Vazio</p>`,
@@ -104,6 +127,7 @@ export function RichTextField({ value, onChange, readOnly, placeholder }: Props)
       </div>
       {preview ? (
         <div
+          ref={previewRef}
           className="prose prose-invert max-w-none px-3 py-2 text-sm min-h-[120px] [&_p]:my-2 [&_h1]:text-2xl [&_h2]:text-xl [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-primary/60 [&_blockquote]:pl-3 [&_blockquote]:italic [&_code]:bg-muted [&_code]:px-1 [&_code]:rounded [&_a]:text-primary [&_a]:underline"
           dangerouslySetInnerHTML={{ __html: renderRichText(src) || `<p class="text-muted-foreground italic">Vazio</p>` }}
         />

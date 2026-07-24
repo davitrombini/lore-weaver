@@ -6,7 +6,16 @@ export type FieldType =
   | "boolean"
   | "date"
   | "image"
-  | "relationship";
+  | "relationship"
+  | "table";
+
+export type TableColumnType = "text" | "number" | "date" | "checkbox";
+
+export interface TableColumn {
+  id: string;
+  name: string;
+  type: TableColumnType;
+}
 
 export interface FieldDef {
   id: string;
@@ -15,6 +24,7 @@ export interface FieldDef {
   options?: string[]; // for select
   targetTemplateId?: string; // for relationship; empty = any
   multi?: boolean; // for relationship
+  columns?: TableColumn[]; // for table
 }
 
 export interface Template {
@@ -35,6 +45,7 @@ export interface DocumentEntry {
   values: Record<string, unknown>;
   createdAt: number;
   updatedAt: number;
+  deletedAt?: number | null;
 }
 
 export interface MapPin {
@@ -58,7 +69,7 @@ export interface WorkspaceState {
   maps: WorldMap[];
   openTabs: string[]; // document ids
   activeTab: string | null;
-  view: "document" | "graph" | "timeline" | "map";
+  view: "document" | "graph" | "timeline" | "map" | "gallery" | "stats" | "trash";
   activeMapId: string | null;
   settings?: {
     hideEmptyFields?: boolean;
@@ -69,6 +80,7 @@ export interface ProjectMeta {
   id: string;
   name: string;
   icon: string; // lucide icon name
+  iconColor?: string;
   updatedAt: number;
 }
 
