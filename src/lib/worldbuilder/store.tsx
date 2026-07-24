@@ -14,6 +14,8 @@ type Action =
   | { type: "addDocument"; doc: DocumentEntry }
   | { type: "updateDocument"; id: string; patch: Partial<DocumentEntry> }
   | { type: "deleteDocument"; id: string }
+  | { type: "restoreDocument"; id: string }
+  | { type: "purgeDocument"; id: string }
   | { type: "openTab"; id: string }
   | { type: "closeTab"; id: string }
   | { type: "setActiveTab"; id: string | null }
@@ -70,11 +72,18 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
       const openTabs = state.openTabs.filter((t) => t !== action.id);
       return {
         ...state,
-        documents: state.documents.filter((d) => d.id !== action.id),
+        documents: state.documents.map((d) => (d.id === action.id ? { ...d, deletedAt: Date.now() } : d)),
         openTabs,
         activeTab: state.activeTab === action.id ? openTabs[0] ?? null : state.activeTab,
       };
     }
+    case "restoreDocument":
+      return {
+        ...state,
+        documents: state.documents.map((d) => (d.id === action.id ? { ...d, deletedAt: null } : d)),
+      };
+    case "purgeDocument":
+      return { ...state, documents: state.documents.filter((d) => d.id !== action.id) };
     case "openTab": {
       const tabs = state.openTabs.includes(action.id) ? state.openTabs : [...state.openTabs, action.id];
       return { ...state, openTabs: tabs, activeTab: action.id, view: "document" };
@@ -127,6 +136,8 @@ interface Ctx {
   createDocument: (templateId: string, title?: string) => DocumentEntry;
   updateDocument: (id: string, patch: Partial<DocumentEntry>) => void;
   deleteDocument: (id: string) => void;
+  restoreDocument: (id: string) => void;
+  purgeDocument: (id: string) => void;
   // tabs
   openTab: (id: string) => void;
   closeTab: (id: string) => void;
@@ -142,12 +153,16 @@ interface Ctx {
   setActiveMap: (id: string | null) => void;
   setSettings: (patch: Partial<NonNullable<WorkspaceState["settings"]>>) => void;
   replaceState: (next: WorkspaceState) => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 const WorldCtx = createContext<Ctx | null>(null);
 
 export function WorldProvider({ projectId, children }: { projectId: string; children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, () => {
+  const [state, rawDispatch] = useReducer(reducer, undefined, () => {
     if (typeof window === "undefined") return initial(false);
     try {
       const raw = localStorage.getItem(storageKeyFor(projectId));
@@ -162,6 +177,42 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
     return initial(true);
   });
 
+  // Undo/redo history
+  const past = useRef<WorkspaceState[]>([]);
+  const future = useRef<WorkspaceState[]>([]);
+  const HISTORY_CAP = 50;
+  const UI_ACTIONS = new Set([
+    "hydrate", "openTab", "closeTab", "setActiveTab", "setView", "setActiveMap",
+  ]);
+  const versionRef = useRef(0);
+  const bumpVersion = () => { versionRef.current++; };
+
+  const dispatch = useCallback((action: Action) => {
+    if (!UI_ACTIONS.has(action.type)) {
+      past.current.push(state);
+      if (past.current.length > HISTORY_CAP) past.current.shift();
+      future.current = [];
+      bumpVersion();
+    }
+    rawDispatch(action);
+  }, [state]);
+
+  const undo = useCallback(() => {
+    const prev = past.current.pop();
+    if (!prev) return;
+    future.current.push(state);
+    bumpVersion();
+    rawDispatch({ type: "hydrate", payload: prev });
+  }, [state]);
+
+  const redo = useCallback(() => {
+    const next = future.current.pop();
+    if (!next) return;
+    past.current.push(state);
+    bumpVersion();
+    rawDispatch({ type: "hydrate", payload: next });
+  }, [state]);
+
   const firstSave = useRef(true);
   useEffect(() => {
     // skip the very first run to avoid clobbering an existing snapshot during hydration
@@ -175,10 +226,10 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
     const t: Template = { id: "tpl_" + uid(), name, icon, fields: [], parentId: parentId ?? null };
     dispatch({ type: "addTemplate", template: t });
     return t;
-  }, []);
+  }, [dispatch]);
 
-  const updateTemplate = useCallback((t: Template) => dispatch({ type: "updateTemplate", template: t }), []);
-  const deleteTemplate = useCallback((id: string) => dispatch({ type: "deleteTemplate", id }), []);
+  const updateTemplate = useCallback((t: Template) => dispatch({ type: "updateTemplate", template: t }), [dispatch]);
+  const deleteTemplate = useCallback((id: string) => dispatch({ type: "deleteTemplate", id }), [dispatch]);
 
   const addField = useCallback(
     (templateId: string, field: Omit<FieldDef, "id">) => {
@@ -187,7 +238,7 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
       const next: Template = { ...tpl, fields: [...tpl.fields, { ...field, id: "f_" + uid() }] };
       dispatch({ type: "updateTemplate", template: next });
     },
-    [state.templates],
+    [state.templates, dispatch],
   );
 
   const removeField = useCallback(
@@ -199,7 +250,7 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
         template: { ...tpl, fields: tpl.fields.filter((f) => f.id !== fieldId) },
       });
     },
-    [state.templates],
+    [state.templates, dispatch],
   );
 
   const updateField = useCallback(
@@ -211,7 +262,7 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
         template: { ...tpl, fields: tpl.fields.map((f) => (f.id === fieldId ? { ...f, ...patch } : f)) },
       });
     },
-    [state.templates],
+    [state.templates, dispatch],
   );
 
   const moveField = useCallback(
@@ -225,7 +276,7 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
       [fields[idx], fields[next]] = [fields[next], fields[idx]];
       dispatch({ type: "updateTemplate", template: { ...tpl, fields } });
     },
-    [state.templates],
+    [state.templates, dispatch],
   );
 
   const createDocument = useCallback((templateId: string, title = "Untitled"): DocumentEntry => {
@@ -240,30 +291,32 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
     dispatch({ type: "addDocument", doc });
     dispatch({ type: "openTab", id: doc.id });
     return doc;
-  }, []);
+  }, [dispatch]);
 
   const updateDocument = useCallback(
     (id: string, patch: Partial<DocumentEntry>) => dispatch({ type: "updateDocument", id, patch }),
-    [],
+    [dispatch],
   );
-  const deleteDocument = useCallback((id: string) => dispatch({ type: "deleteDocument", id }), []);
-  const openTab = useCallback((id: string) => dispatch({ type: "openTab", id }), []);
-  const closeTab = useCallback((id: string) => dispatch({ type: "closeTab", id }), []);
-  const setActiveTab = useCallback((id: string | null) => dispatch({ type: "setActiveTab", id }), []);
-  const setView = useCallback((v: WorkspaceState["view"]) => dispatch({ type: "setView", view: v }), []);
+  const deleteDocument = useCallback((id: string) => dispatch({ type: "deleteDocument", id }), [dispatch]);
+  const restoreDocument = useCallback((id: string) => dispatch({ type: "restoreDocument", id }), [dispatch]);
+  const purgeDocument = useCallback((id: string) => dispatch({ type: "purgeDocument", id }), [dispatch]);
+  const openTab = useCallback((id: string) => dispatch({ type: "openTab", id }), [dispatch]);
+  const closeTab = useCallback((id: string) => dispatch({ type: "closeTab", id }), [dispatch]);
+  const setActiveTab = useCallback((id: string | null) => dispatch({ type: "setActiveTab", id }), [dispatch]);
+  const setView = useCallback((v: WorkspaceState["view"]) => dispatch({ type: "setView", view: v }), [dispatch]);
 
   const addMap = useCallback((name: string, image: string): WorldMap => {
     const m: WorldMap = { id: "map_" + uid(), name, image, pins: [] };
     dispatch({ type: "addMap", map: m });
     return m;
-  }, []);
+  }, [dispatch]);
 
   const updateMap = useCallback(
     (id: string, patch: Partial<WorldMap>) => dispatch({ type: "updateMap", id, patch }),
-    [],
+    [dispatch],
   );
 
-  const deleteMap = useCallback((id: string) => dispatch({ type: "deleteMap", id }), []);
+  const deleteMap = useCallback((id: string) => dispatch({ type: "deleteMap", id }), [dispatch]);
 
   const addPin = useCallback(
     (mapId: string, pin: Omit<MapPin, "id">) => {
@@ -272,7 +325,7 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
       const newPin: MapPin = { ...pin, id: "pin_" + uid() };
       dispatch({ type: "updateMap", id: mapId, patch: { pins: [...m.pins, newPin] } });
     },
-    [state.maps],
+    [state.maps, dispatch],
   );
 
   const removePin = useCallback(
@@ -281,7 +334,7 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
       if (!m) return;
       dispatch({ type: "updateMap", id: mapId, patch: { pins: m.pins.filter((p) => p.id !== pinId) } });
     },
-    [state.maps],
+    [state.maps, dispatch],
   );
 
   const updatePin = useCallback(
@@ -294,29 +347,33 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
         patch: { pins: m.pins.map((p) => (p.id === pinId ? { ...p, ...patch } : p)) },
       });
     },
-    [state.maps],
+    [state.maps, dispatch],
   );
 
-  const setActiveMap = useCallback((id: string | null) => dispatch({ type: "setActiveMap", id }), []);
+  const setActiveMap = useCallback((id: string | null) => dispatch({ type: "setActiveMap", id }), [dispatch]);
 
   const setSettings = useCallback(
     (patch: Partial<NonNullable<WorkspaceState["settings"]>>) => dispatch({ type: "setSettings", patch }),
-    [],
+    [dispatch],
   );
 
-  const replaceState = useCallback((next: WorkspaceState) => dispatch({ type: "hydrate", payload: next }), []);
+  const replaceState = useCallback((next: WorkspaceState) => rawDispatch({ type: "hydrate", payload: next }), []);
 
   const value = useMemo<Ctx>(
     () => ({
       state,
       createTemplate, updateTemplate, deleteTemplate, addField, removeField, updateField, moveField,
-      createDocument, updateDocument, deleteDocument,
+      createDocument, updateDocument, deleteDocument, restoreDocument, purgeDocument,
       openTab, closeTab, setActiveTab,
       setView,
       addMap, updateMap, deleteMap, addPin, removePin, updatePin, setActiveMap,
       setSettings, replaceState,
+      undo, redo,
+      canUndo: past.current.length > 0,
+      canRedo: future.current.length > 0,
     }),
-    [state, createTemplate, updateTemplate, deleteTemplate, addField, removeField, updateField, moveField, createDocument, updateDocument, deleteDocument, openTab, closeTab, setActiveTab, setView, addMap, updateMap, deleteMap, addPin, removePin, updatePin, setActiveMap, setSettings, replaceState],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [state, versionRef.current, createTemplate, updateTemplate, deleteTemplate, addField, removeField, updateField, moveField, createDocument, updateDocument, deleteDocument, restoreDocument, purgeDocument, openTab, closeTab, setActiveTab, setView, addMap, updateMap, deleteMap, addPin, removePin, updatePin, setActiveMap, setSettings, replaceState, undo, redo],
   );
 
   return <WorldCtx.Provider value={value}>{children}</WorldCtx.Provider>;
