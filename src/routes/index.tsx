@@ -7,6 +7,9 @@ import { DocumentView } from "@/components/wb/DocumentView";
 import { GraphView } from "@/components/wb/GraphView";
 import { TimelineView } from "@/components/wb/TimelineView";
 import { MapView } from "@/components/wb/MapView";
+import { GalleryView } from "@/components/wb/GalleryView";
+import { StatsView } from "@/components/wb/StatsView";
+import { TrashView } from "@/components/wb/TrashView";
 import { CommandPalette } from "@/components/wb/CommandPalette";
 import { TemplateManager } from "@/components/wb/TemplateManager";
 import { TemplateLibrary } from "@/components/wb/TemplateLibrary";
@@ -103,6 +106,13 @@ function ProjectsRoot() {
     }));
   }, []);
 
+  const setProjectIconColor = useCallback((id: string, iconColor: string) => {
+    setIdx((s) => ({
+      ...s,
+      projects: s.projects.map((p) => (p.id === id ? { ...p, iconColor, updatedAt: Date.now() } : p)),
+    }));
+  }, []);
+
   const importProject = useCallback((name: string, icon: string, state: WorkspaceState) => {
     const id = "p_" + uid();
     try { localStorage.setItem(`void_project_${id}`, JSON.stringify(state)); } catch {}
@@ -133,6 +143,7 @@ function ProjectsRoot() {
         onExit={exitToMenu}
         onRename={(name) => renameProject(current.id, name)}
         onIconChange={(icon) => setProjectIcon(current.id, icon)}
+        onIconColorChange={(c) => setProjectIconColor(current.id, c)}
       />
     </WorldProvider>
   );
@@ -143,15 +154,43 @@ interface ShellProps {
   onExit: () => void;
   onRename: (name: string) => void;
   onIconChange: (icon: string) => void;
+  onIconColorChange: (color: string) => void;
 }
 
-function Shell({ project, onExit, onRename, onIconChange }: ShellProps) {
-  const { state } = useWorld();
+function Shell({ project, onExit, onRename, onIconChange, onIconColorChange }: ShellProps) {
+  const world = useWorld();
+  const { state, openTab } = world;
   const [cmdOpen, setCmdOpen] = useState(false);
   const [tplOpen, setTplOpen] = useState(false);
   const [libOpen, setLibOpen] = useState(false);
   const [tutOpen, setTutOpen] = useState(false);
   const activeDoc = state.documents.find((d) => d.id === state.activeTab);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey;
+      const undo = (world as unknown as { undo?: () => void }).undo;
+      const redo = (world as unknown as { redo?: () => void }).redo;
+      if (mod && !e.shiftKey && e.key.toLowerCase() === "z") { e.preventDefault(); undo?.(); }
+      else if (mod && (e.key.toLowerCase() === "y" || (e.shiftKey && e.key.toLowerCase() === "z"))) { e.preventDefault(); redo?.(); }
+    };
+    const onOpen = (e: Event) => {
+      const id = (e as CustomEvent<{ id: string }>).detail?.id;
+      if (id) openTab(id);
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("void:open-doc", onOpen as EventListener);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("void:open-doc", onOpen as EventListener);
+    };
+  }, [openTab, world]);
+
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("void_tutorial_pref")) setTutOpen(true);
+    } catch {}
+  }, []);
 
   const exportProject = useCallback(() => {
     const payload = { projectName: project.name, projectIcon: project.icon, state };
@@ -171,6 +210,7 @@ function Shell({ project, onExit, onRename, onIconChange }: ShellProps) {
         onExit={onExit}
         onRename={onRename}
         onIconChange={onIconChange}
+        onIconColorChange={onIconColorChange}
         onExport={exportProject}
         onOpenCommand={() => setCmdOpen(true)}
         onOpenTemplates={() => setTplOpen(true)}
@@ -185,6 +225,9 @@ function Shell({ project, onExit, onRename, onIconChange }: ShellProps) {
           {state.view === "graph" && <GraphView />}
           {state.view === "timeline" && <TimelineView />}
           {state.view === "map" && <MapView />}
+          {state.view === "gallery" && <GalleryView />}
+          {state.view === "stats" && <StatsView />}
+          {state.view === "trash" && <TrashView />}
         </div>
       </main>
       <CommandPalette open={cmdOpen} setOpen={setCmdOpen} onOpenTemplates={() => setTplOpen(true)} />
