@@ -6,7 +6,7 @@ export function GraphView() {
   const { state, openTab } = useWorld();
 
   const layout = useMemo(() => {
-    const docs = state.documents;
+    const docs = state.documents.filter((d) => !d.deletedAt);
     const N = docs.length || 1;
     const W = 900, H = 600, CX = W / 2, CY = H / 2;
     const R = Math.min(W, H) / 2 - 80;
