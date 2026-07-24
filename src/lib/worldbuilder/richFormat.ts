@@ -11,6 +11,12 @@ const COLOR_MAP: Record<string, string> = {
   "l": "__BOLD__", "o": "__ITALIC__", "n": "__UNDERLINE__", "m": "__STRIKE__",
 };
 
+// Wiki-link registry, populated by a subscriber in the app shell.
+let WIKI_INDEX: Map<string, string> = new Map(); // lowercased name -> doc id
+export function setWikiIndex(docs: { id: string; title: string }[]) {
+  WIKI_INDEX = new Map(docs.map((d) => [d.title.toLowerCase(), d.id]));
+}
+
 function escape(s: string) {
   return s
     .replace(/&(?![0-9a-frlonm])/g, "&amp;")
@@ -54,6 +60,12 @@ function inlineMd(s: string): string {
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/\*([^*]+)\*/g, "<em>$1</em>")
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  // Wiki links @(name)
+  t = t.replace(/@\(([^)]+)\)/g, (_m, name: string) => {
+    const id = WIKI_INDEX.get(name.trim().toLowerCase());
+    if (id) return `<a href="#" class="wiki-link" data-doc-id="${id}">${name}</a>`;
+    return `<span class="wiki-link wiki-missing" title="Documento não encontrado">${name}</span>`;
+  });
   t = applyColorCodes(t);
   return t;
 }
