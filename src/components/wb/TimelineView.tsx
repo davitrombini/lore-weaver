@@ -2,13 +2,14 @@ import { useMemo } from "react";
 import { useWorld } from "@/lib/worldbuilder/store";
 import { Icon } from "./icons";
 import { motion } from "framer-motion";
+import { formatBR } from "@/lib/worldbuilder/dateUtils";
 
 export function TimelineView() {
   const { state, openTab } = useWorld();
 
   const events = useMemo(() => {
     const items: { id: string; title: string; date: string; templateId: string; fieldName: string }[] = [];
-    for (const d of state.documents) {
+    for (const d of state.documents.filter((x) => !x.deletedAt)) {
       const tpl = state.templates.find((t) => t.id === d.templateId);
       if (!tpl) continue;
       for (const f of tpl.fields) {
@@ -50,7 +51,7 @@ export function TimelineView() {
                     className="cursor-pointer rounded-lg border border-border bg-card p-4 hover:border-primary/50 transition-colors"
                   >
                     <div className="text-xs font-mono tracking-wider text-muted-foreground mb-1">
-                      {e.date} · {e.fieldName}
+                      {formatBR(e.date)} · {e.fieldName}
                     </div>
                     <div className="flex items-center gap-2">
                       {tpl && <Icon name={tpl.icon} className="w-4 h-4" style={{ color: tpl.color }} />}
