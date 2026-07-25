@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { Plus, Trash2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Pencil } from "lucide-react";
 import type { TableColumn, TableColumnType } from "@/lib/worldbuilder/types";
 import { formatBR } from "@/lib/worldbuilder/dateUtils";
@@ -61,11 +61,7 @@ interface Props {
 }
 
 export function TableField({ columns, value, onChange, onChangeColumns, readOnly }: Props) {
-  // Stable fallback columns so IDs don't regenerate every render (which would
-  // wipe typed cell values because writes key off column ids).
-  const fallbackRef = useRef<TableColumn[] | null>(null);
-  if (!fallbackRef.current) fallbackRef.current = defaultCols();
-  const cols = columns.length ? columns : fallbackRef.current;
+  const cols = columns.length ? columns : defaultCols();
   const val = useMemo(() => normalize(value, cols), [value, cols]);
 
   const setCell = (rowIdx: number, colId: string, v: string | number | boolean) => {
@@ -106,14 +102,14 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
   if (readOnly) {
     if (!val.rows.length) return <div className="text-sm text-muted-foreground italic">Tabela vazia</div>;
     return (
-      <div className="overflow-auto border border-border rounded-md max-h-[420px]">
-        <table className="w-full text-sm border-collapse">
-          <thead className="bg-muted/40 sticky top-0">
-            <tr>{cols.map((c) => <th key={c.id} className="text-left px-2 py-1.5 font-medium border border-border">{c.name}</th>)}</tr>
+      <div className="overflow-auto border border-border rounded-md">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/40">
+            <tr>{cols.map((c) => <th key={c.id} className="text-left px-2 py-1.5 font-medium">{c.name}</th>)}</tr>
           </thead>
           <tbody>
             {val.rows.map((r, i) => (
-              <tr key={i}>
+              <tr key={i} className="border-t border-border">
                 {cols.map((c) => {
                   const raw = r[c.id];
                   let display: React.ReactNode = raw as React.ReactNode;
@@ -123,7 +119,7 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
                     const n = resolveCell(raw, cols, r);
                     display = n === undefined ? raw : String(n);
                   }
-                  return <td key={c.id} className="px-2 py-1 tabular-nums border border-border">{display}</td>;
+                  return <td key={c.id} className="px-2 py-1 tabular-nums">{display}</td>;
                 })}
               </tr>
             ))}
@@ -135,12 +131,12 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
 
   return (
     <div className="space-y-2">
-      <div className="overflow-auto border border-border rounded-md max-h-[420px]">
-        <table className="w-full text-sm border-collapse">
-          <thead className="bg-muted/40 sticky top-0 z-10">
+      <div className="overflow-auto border border-border rounded-md">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/40">
             <tr>
               {cols.map((c) => (
-                <th key={c.id} className="text-left px-1.5 py-1 font-medium border border-border">
+                <th key={c.id} className="text-left px-1.5 py-1 font-medium">
                   {onChangeColumns ? (
                     <div className="flex items-center gap-0.5">
                       <input
@@ -165,24 +161,24 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
                   ) : c.name}
                 </th>
               ))}
-              <th className="w-8 border border-border" />
+              <th className="w-8" />
             </tr>
           </thead>
           <tbody>
             {val.rows.map((r, i) => (
-              <tr key={i}>
+              <tr key={i} className="border-t border-border">
                 {cols.map((c) => {
                   const raw = r[c.id];
                   if (c.type === "checkbox") {
                     return (
-                      <td key={c.id} className="px-2 py-1 border border-border">
+                      <td key={c.id} className="px-2 py-1">
                         <input type="checkbox" checked={!!raw} onChange={(e) => setCell(i, c.id, e.target.checked)} />
                       </td>
                     );
                   }
                   if (c.type === "date") {
                     return (
-                      <td key={c.id} className="px-1 py-0.5 border border-border">
+                      <td key={c.id} className="px-1 py-0.5">
                         <input type="date" value={(raw as string) ?? ""} onChange={(e) => setCell(i, c.id, e.target.value)}
                           className="bg-transparent text-xs w-full focus:outline-none" />
                       </td>
@@ -194,7 +190,7 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
                     if (isEq) {
                       const n = resolveCell(raw as string, cols, r);
                       return (
-                        <td key={c.id} className="px-1 py-0.5 border border-border">
+                        <td key={c.id} className="px-1 py-0.5">
                           <input value={raw as string} onChange={(e) => setCell(i, c.id, e.target.value)}
                             className="bg-transparent text-xs w-full focus:outline-none font-mono" />
                           <span className="block text-[10px] text-muted-foreground tabular-nums">= {n ?? "?"}</span>
@@ -202,7 +198,7 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
                       );
                     }
                     return (
-                      <td key={c.id} className="px-1 py-0.5 border border-border">
+                      <td key={c.id} className="px-1 py-0.5">
                         <input
                           value={(raw as string | number | undefined) ?? ""}
                           onChange={(e) => {
@@ -218,7 +214,7 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
                     );
                   }
                   return (
-                    <td key={c.id} className="px-1 py-0.5 border border-border">
+                    <td key={c.id} className="px-1 py-0.5">
                       <input
                         value={(raw as string) ?? ""}
                         onChange={(e) => setCell(i, c.id, e.target.value)}
@@ -227,7 +223,7 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
                     </td>
                   );
                 })}
-                <td className="px-1 py-0.5 border border-border">
+                <td className="px-1 py-0.5">
                   <div className="flex items-center gap-0.5">
                     <button onClick={() => moveRow(i, -1)} className="text-muted-foreground hover:text-foreground"><ChevronUp className="w-3 h-3" /></button>
                     <button onClick={() => moveRow(i, 1)} className="text-muted-foreground hover:text-foreground"><ChevronDown className="w-3 h-3" /></button>
