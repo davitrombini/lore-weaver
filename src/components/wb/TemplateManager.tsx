@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2, ChevronUp, ChevronDown, Library, Pencil, Check, X } from "lucide-react";
 import { useWorld } from "@/lib/worldbuilder/store";
 import { Icon, ICON_CHOICES } from "./icons";
-import type { FieldType, Template } from "@/lib/worldbuilder/types";
+import type { FieldDef, FieldType, Template, TableColumn, TableColumnType } from "@/lib/worldbuilder/types";
 import { cn } from "@/lib/utils";
 import { useModals } from "./confirm";
 
@@ -32,6 +32,7 @@ const FIELD_TYPES: { value: FieldType; label: string }[] = [
   { value: "date", label: "Data" },
   { value: "image", label: "Imagem" },
   { value: "relationship", label: "Relacionamento" },
+  { value: "table", label: "Tabela" },
 ];
 
 export function TemplateManager({ open, onOpenChange, onOpenLibrary }: { open: boolean; onOpenChange: (o: boolean) => void; onOpenLibrary?: () => void }) {
@@ -167,12 +168,13 @@ function TemplateEditor({
   const [draftName, setDraftName] = useState("");
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Input
-          value={template.name}
-          onChange={(e) => onUpdate({ ...template, name: e.target.value })}
-          className="text-lg font-medium max-w-xs"
-        />
+      <Input
+        value={template.name}
+        onChange={(e) => onUpdate({ ...template, name: e.target.value })}
+        placeholder="Nome do template"
+        className="text-lg font-medium w-full"
+      />
+      <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1" title="Cor do ícone">
           <span className="text-[10px] text-muted-foreground">Ícone</span>
           <Input type="color" value={template.color ?? "#999999"}
@@ -227,8 +229,11 @@ function TemplateEditor({
         <div className="space-y-1">
           {template.fields.map((f, i) => {
             const editing = editingField === f.id;
+            const expanded = expandedField === f.id;
+            const hasConfig = f.type === "select" || f.type === "relationship" || f.type === "table" || f.type === "number";
             return (
-              <div key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md border border-border bg-card">
+              <div key={f.id} className="rounded-md border border-border bg-card">
+              <div className="flex items-center gap-2 px-2 py-1.5">
                 <div className="flex flex-col">
                   <button
                     disabled={i === 0}
@@ -271,9 +276,20 @@ function TemplateEditor({
                 ) : (
                   <button onClick={() => { setEditingField(f.id); setDraftName(f.name); }} className="text-muted-foreground hover:text-foreground" title="Renomear"><Pencil className="w-3.5 h-3.5" /></button>
                 )}
+                {hasConfig && (
+                  <button onClick={() => setExpandedField(expanded ? null : f.id)} className="text-muted-foreground hover:text-foreground" title="Configurar">
+                    {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  </button>
+                )}
                 <button onClick={() => onRemoveField(f.id)} className="text-muted-foreground hover:text-destructive" title="Remover">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
+              </div>
+              {expanded && hasConfig && (
+                <div className="border-t border-border px-3 py-2 bg-muted/20">
+                  <FieldConfig field={f} templates={state.templates} onChange={(patch) => onUpdateField(f.id, patch)} />
+                </div>
+              )}
               </div>
             );
           })}
