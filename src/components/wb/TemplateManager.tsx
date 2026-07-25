@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2, ChevronUp, ChevronDown, Library, Pencil, Check, X } from "lucide-react";
 import { useWorld } from "@/lib/worldbuilder/store";
 import { Icon, ICON_CHOICES } from "./icons";
-import type { FieldType, Template } from "@/lib/worldbuilder/types";
+import type { FieldDef, FieldType, Template, TableColumn, TableColumnType } from "@/lib/worldbuilder/types";
 import { cn } from "@/lib/utils";
 import { useModals } from "./confirm";
 
@@ -32,6 +32,7 @@ const FIELD_TYPES: { value: FieldType; label: string }[] = [
   { value: "date", label: "Data" },
   { value: "image", label: "Imagem" },
   { value: "relationship", label: "Relacionamento" },
+  { value: "table", label: "Tabela" },
 ];
 
 export function TemplateManager({ open, onOpenChange, onOpenLibrary }: { open: boolean; onOpenChange: (o: boolean) => void; onOpenLibrary?: () => void }) {
@@ -165,14 +166,16 @@ function TemplateEditor({
   const { state } = useWorld();
   const [editingField, setEditingField] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
+  const [expandedField, setExpandedField] = useState<string | null>(null);
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Input
-          value={template.name}
-          onChange={(e) => onUpdate({ ...template, name: e.target.value })}
-          className="text-lg font-medium max-w-xs"
-        />
+      <Input
+        value={template.name}
+        onChange={(e) => onUpdate({ ...template, name: e.target.value })}
+        placeholder="Nome do template"
+        className="text-lg font-medium w-full"
+      />
+      <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1" title="Cor do ícone">
           <span className="text-[10px] text-muted-foreground">Ícone</span>
           <Input type="color" value={template.color ?? "#999999"}
@@ -227,8 +230,11 @@ function TemplateEditor({
         <div className="space-y-1">
           {template.fields.map((f, i) => {
             const editing = editingField === f.id;
+            const expanded = expandedField === f.id;
+            const hasConfig = f.type === "select" || f.type === "relationship" || f.type === "table" || f.type === "number";
             return (
-              <div key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md border border-border bg-card">
+              <div key={f.id} className="rounded-md border border-border bg-card">
+              <div className="flex items-center gap-2 px-2 py-1.5">
                 <div className="flex flex-col">
                   <button
                     disabled={i === 0}
@@ -271,9 +277,20 @@ function TemplateEditor({
                 ) : (
                   <button onClick={() => { setEditingField(f.id); setDraftName(f.name); }} className="text-muted-foreground hover:text-foreground" title="Renomear"><Pencil className="w-3.5 h-3.5" /></button>
                 )}
+                {hasConfig && (
+                  <button onClick={() => setExpandedField(expanded ? null : f.id)} className="text-muted-foreground hover:text-foreground" title="Configurar">
+                    {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  </button>
+                )}
                 <button onClick={() => onRemoveField(f.id)} className="text-muted-foreground hover:text-destructive" title="Remover">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
+              </div>
+              {expanded && hasConfig && (
+                <div className="border-t border-border px-3 py-2 bg-muted/20">
+                  <FieldConfig field={f} templates={state.templates} onChange={(patch) => onUpdateField(f.id, patch)} />
+                </div>
+              )}
               </div>
             );
           })}
@@ -336,4 +353,120 @@ function TemplateEditor({
       </div>
     </div>
   );
+}
+
+function FieldConfig({ field, templates, onChange }: { field: FieldDef; templates: Template[]; onChange: (patch: Partial<FieldDef>) => void }) {
+  if (field.type === "select") {
+    const opts = field.options ?? [];
+    return (
+      <div className="space-y-2">
+        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Opções</div>
+        {opts.map((o, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <Input
+              value={o}
+              onChange={(e) => {
+                const next = [...opts];
+                next[i] = e.target.value;
+                onChange({ options: next });
+              }}
+              className="h-7 text-sm"
+            />
+            <button
+              onClick={() => onChange({ options: opts.filter((_, j) => j !== i) })}
+              className="text-muted-foreground hover:text-destructive"
+            ><Trash2 className="w-3.5 h-3.5" /></button>
+          </div>
+        ))}
+        <Button size="sm" variant="outline" onClick={() => onChange({ options: [...opts, "Nova opção"] })}>
+          <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar opção
+        </Button>
+      </div>
+    );
+  }
+  if (field.type === "relationship") {
+    return (
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Template alvo</div>
+          <Select
+            value={field.targetTemplateId ?? "__any"}
+            onValueChange={(v) => onChange({ targetTemplateId: v === "__any" ? undefined : v })}
+          >
+            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__any">Qualquer template</SelectItem>
+              {templates.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Cardinalidade</div>
+          <Select value={field.multi ? "multi" : "single"} onValueChange={(v) => onChange({ multi: v === "multi" })}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="single">Link único</SelectItem>
+              <SelectItem value="multi">Múltiplos links</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    );
+  }
+  if (field.type === "table") {
+    const cols = field.columns ?? [];
+    const setCols = (next: TableColumn[]) => onChange({ columns: next });
+    return (
+      <div className="space-y-2">
+        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Colunas</div>
+        {cols.map((c, i) => (
+          <div key={c.id} className="flex items-center gap-2">
+            <Input
+              value={c.name}
+              onChange={(e) => setCols(cols.map((cc, j) => (j === i ? { ...cc, name: e.target.value } : cc)))}
+              className="h-7 text-sm flex-1"
+            />
+            <Select
+              value={c.type}
+              onValueChange={(v) => setCols(cols.map((cc, j) => (j === i ? { ...cc, type: v as TableColumnType } : cc)))}
+            >
+              <SelectTrigger className="h-7 w-28 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="text">Texto</SelectItem>
+                <SelectItem value="number">Número</SelectItem>
+                <SelectItem value="date">Data</SelectItem>
+                <SelectItem value="checkbox">Checkbox</SelectItem>
+              </SelectContent>
+            </Select>
+            <button
+              disabled={i === 0}
+              onClick={() => { const n = [...cols]; [n[i-1], n[i]] = [n[i], n[i-1]]; setCols(n); }}
+              className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+            ><ChevronUp className="w-3.5 h-3.5" /></button>
+            <button
+              disabled={i === cols.length - 1}
+              onClick={() => { const n = [...cols]; [n[i+1], n[i]] = [n[i], n[i+1]]; setCols(n); }}
+              className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+            ><ChevronDown className="w-3.5 h-3.5" /></button>
+            <button
+              onClick={() => setCols(cols.filter((_, j) => j !== i))}
+              className="text-muted-foreground hover:text-destructive"
+            ><Trash2 className="w-3.5 h-3.5" /></button>
+          </div>
+        ))}
+        <Button size="sm" variant="outline"
+          onClick={() => setCols([...cols, { id: "c_" + Math.random().toString(36).slice(2, 8), name: `Coluna ${cols.length + 1}`, type: "text" }])}
+        >
+          <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar coluna
+        </Button>
+        <div className="text-[10px] text-muted-foreground">Dica: em células numéricas use <code className="font-mono">=a+b</code> referenciando outras colunas da mesma linha.</div>
+      </div>
+    );
+  }
+  if (field.type === "number") {
+    return (
+      <div className="text-xs text-muted-foreground">Sem configurações adicionais.</div>
+    );
+  }
+  return null;
 }
