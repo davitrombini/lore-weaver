@@ -134,6 +134,13 @@ export function TemplateManager({ open, onOpenChange, onOpenLibrary }: { open: b
                       newField.type === "select"
                         ? (newField.options ?? "").split(",").map((s) => s.trim()).filter(Boolean)
                         : undefined,
+                    columns:
+                      newField.type === "table"
+                        ? [
+                            { id: "c_" + Math.random().toString(36).slice(2, 8), name: "Coluna 1", type: "text" },
+                            { id: "c_" + Math.random().toString(36).slice(2, 8), name: "Coluna 2", type: "number" },
+                          ]
+                        : undefined,
                   });
                   setNewField({ name: "", type: "text" });
                 }}
