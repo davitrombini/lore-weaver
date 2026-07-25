@@ -354,3 +354,119 @@ function TemplateEditor({
     </div>
   );
 }
+
+function FieldConfig({ field, templates, onChange }: { field: FieldDef; templates: Template[]; onChange: (patch: Partial<FieldDef>) => void }) {
+  if (field.type === "select") {
+    const opts = field.options ?? [];
+    return (
+      <div className="space-y-2">
+        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Opções</div>
+        {opts.map((o, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <Input
+              value={o}
+              onChange={(e) => {
+                const next = [...opts];
+                next[i] = e.target.value;
+                onChange({ options: next });
+              }}
+              className="h-7 text-sm"
+            />
+            <button
+              onClick={() => onChange({ options: opts.filter((_, j) => j !== i) })}
+              className="text-muted-foreground hover:text-destructive"
+            ><Trash2 className="w-3.5 h-3.5" /></button>
+          </div>
+        ))}
+        <Button size="sm" variant="outline" onClick={() => onChange({ options: [...opts, "Nova opção"] })}>
+          <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar opção
+        </Button>
+      </div>
+    );
+  }
+  if (field.type === "relationship") {
+    return (
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Template alvo</div>
+          <Select
+            value={field.targetTemplateId ?? "__any"}
+            onValueChange={(v) => onChange({ targetTemplateId: v === "__any" ? undefined : v })}
+          >
+            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__any">Qualquer template</SelectItem>
+              {templates.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Cardinalidade</div>
+          <Select value={field.multi ? "multi" : "single"} onValueChange={(v) => onChange({ multi: v === "multi" })}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="single">Link único</SelectItem>
+              <SelectItem value="multi">Múltiplos links</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    );
+  }
+  if (field.type === "table") {
+    const cols = field.columns ?? [];
+    const setCols = (next: TableColumn[]) => onChange({ columns: next });
+    return (
+      <div className="space-y-2">
+        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Colunas</div>
+        {cols.map((c, i) => (
+          <div key={c.id} className="flex items-center gap-2">
+            <Input
+              value={c.name}
+              onChange={(e) => setCols(cols.map((cc, j) => (j === i ? { ...cc, name: e.target.value } : cc)))}
+              className="h-7 text-sm flex-1"
+            />
+            <Select
+              value={c.type}
+              onValueChange={(v) => setCols(cols.map((cc, j) => (j === i ? { ...cc, type: v as TableColumnType } : cc)))}
+            >
+              <SelectTrigger className="h-7 w-28 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="text">Texto</SelectItem>
+                <SelectItem value="number">Número</SelectItem>
+                <SelectItem value="date">Data</SelectItem>
+                <SelectItem value="checkbox">Checkbox</SelectItem>
+              </SelectContent>
+            </Select>
+            <button
+              disabled={i === 0}
+              onClick={() => { const n = [...cols]; [n[i-1], n[i]] = [n[i], n[i-1]]; setCols(n); }}
+              className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+            ><ChevronUp className="w-3.5 h-3.5" /></button>
+            <button
+              disabled={i === cols.length - 1}
+              onClick={() => { const n = [...cols]; [n[i+1], n[i]] = [n[i], n[i+1]]; setCols(n); }}
+              className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+            ><ChevronDown className="w-3.5 h-3.5" /></button>
+            <button
+              onClick={() => setCols(cols.filter((_, j) => j !== i))}
+              className="text-muted-foreground hover:text-destructive"
+            ><Trash2 className="w-3.5 h-3.5" /></button>
+          </div>
+        ))}
+        <Button size="sm" variant="outline"
+          onClick={() => setCols([...cols, { id: "c_" + Math.random().toString(36).slice(2, 8), name: `Coluna ${cols.length + 1}`, type: "text" }])}
+        >
+          <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar coluna
+        </Button>
+        <div className="text-[10px] text-muted-foreground">Dica: em células numéricas use <code className="font-mono">=a+b</code> referenciando outras colunas da mesma linha.</div>
+      </div>
+    );
+  }
+  if (field.type === "number") {
+    return (
+      <div className="text-xs text-muted-foreground">Sem configurações adicionais.</div>
+    );
+  }
+  return null;
+}
