@@ -166,6 +166,7 @@ function TemplateEditor({
   const { state } = useWorld();
   const [editingField, setEditingField] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
+  const [expandedField, setExpandedField] = useState<string | null>(null);
   return (
     <div className="space-y-6">
       <Input
