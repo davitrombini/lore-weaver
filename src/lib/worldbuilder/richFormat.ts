@@ -25,33 +25,46 @@ function escape(s: string) {
 }
 
 function applyColorCodes(line: string): string {
-  // Split on hex codes (&x&R&R&G&G&B&B) first, then any &X code (0-9a-f, r, l, o, n, m)
+  // Supports &0..&f palette codes, hex codes (&x&R&R&G&G&B&B), &r reset and
+  // the formatting codes &l &o &n &m. Tags are always properly nested.
   let out = "";
   let openSpans = 0;
-  let openFmt: string[] = [];
-  const parts = line.split(/(&x(?:&[0-9a-f]){6}|&[0-9a-frlonm])/gi);
+  const openFmt: string[] = [];
+  const closeFmt = () => { for (let i = openFmt.length - 1; i >= 0; i--) out += `</${openFmt[i]}>`; };
+  const reopenFmt = () => { for (const t of openFmt) out += `<${t}>`; };
   const closeAll = () => {
-    while (openFmt.length) { out += `</${openFmt.pop()}>`; }
+    closeFmt();
+    openFmt.length = 0;
     while (openSpans > 0) { out += "</span>"; openSpans--; }
   };
+  const setColor = (css: string) => {
+    // Swap the color while preserving any active bold/italic/underline state.
+    closeFmt();
+    while (openSpans > 0) { out += "</span>"; openSpans--; }
+    out += `<span style="color:${css}">`;
+    openSpans++;
+    reopenFmt();
+  };
+  const openTag = (tag: string) => {
+    if (openFmt.includes(tag)) return;
+    out += `<${tag}>`;
+    openFmt.push(tag);
+  };
+
+  const parts = line.split(/(&x(?:&[0-9a-f]){6}|&[0-9a-frlonm])/gi);
   for (const p of parts) {
+    if (!p) continue;
     const code = p.toLowerCase();
     if (/^&x(&[0-9a-f]){6}$/.test(code)) {
-      // Hex color: &x&R&R&G&G&B&B — keep any active bold/italic formatting.
-      while (openSpans > 0) { out += "</span>"; openSpans--; }
-      const hex = code.slice(2).replace(/&/g, "");
-      out += `<span style="color:#${hex}">`;
-      openSpans++;
+      setColor("#" + code.slice(2).replace(/&/g, ""));
     } else if (/^&[0-9a-f]$/.test(code)) {
-      closeAll();
-      out += `<span style="color:${COLOR_MAP[code[1]]}">`;
-      openSpans++;
+      setColor(COLOR_MAP[code[1]]);
     } else if (code === "&r") {
       closeAll();
-    } else if (code === "&l") { out += "<strong>"; openFmt.push("strong"); }
-    else if (code === "&o") { out += "<em>"; openFmt.push("em"); }
-    else if (code === "&n") { out += "<u>"; openFmt.push("u"); }
-    else if (code === "&m") { out += "<s>"; openFmt.push("s"); }
+    } else if (code === "&l") { openTag("strong"); }
+    else if (code === "&o") { openTag("em"); }
+    else if (code === "&n") { openTag("u"); }
+    else if (code === "&m") { openTag("s"); }
     else {
       out += p;
     }
