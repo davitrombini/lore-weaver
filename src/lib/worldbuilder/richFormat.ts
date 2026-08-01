@@ -19,7 +19,7 @@ export function setWikiIndex(docs: { id: string; title: string }[]) {
 
 function escape(s: string) {
   return s
-    .replace(/&(?![0-9a-frlonmx])/g, "&amp;")
+    .replace(/&(?!(?:x(?:&[0-9a-f]){6})|[0-9a-frlonm])/gi, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 }
@@ -29,27 +29,29 @@ function applyColorCodes(line: string): string {
   let out = "";
   let openSpans = 0;
   let openFmt: string[] = [];
-  const parts = line.split(/(&x(?:&[0-9a-fA-F]){6}|&[0-9a-frlonm])/g);
+  const parts = line.split(/(&x(?:&[0-9a-f]){6}|&[0-9a-frlonm])/gi);
   const closeAll = () => {
     while (openFmt.length) { out += `</${openFmt.pop()}>`; }
     while (openSpans > 0) { out += "</span>"; openSpans--; }
   };
   for (const p of parts) {
-    if (/^&x(&[0-9a-fA-F]){6}$/.test(p)) {
-      closeAll();
-      const hex = p.slice(2).replace(/&/g, "");
+    const code = p.toLowerCase();
+    if (/^&x(&[0-9a-f]){6}$/.test(code)) {
+      // Hex color: &x&R&R&G&G&B&B — keep any active bold/italic formatting.
+      while (openSpans > 0) { out += "</span>"; openSpans--; }
+      const hex = code.slice(2).replace(/&/g, "");
       out += `<span style="color:#${hex}">`;
       openSpans++;
-    } else if (/^&[0-9a-f]$/.test(p)) {
+    } else if (/^&[0-9a-f]$/.test(code)) {
       closeAll();
-      out += `<span style="color:${COLOR_MAP[p[1]]}">`;
+      out += `<span style="color:${COLOR_MAP[code[1]]}">`;
       openSpans++;
-    } else if (p === "&r") {
+    } else if (code === "&r") {
       closeAll();
-    } else if (p === "&l") { out += "<strong>"; openFmt.push("strong"); }
-    else if (p === "&o") { out += "<em>"; openFmt.push("em"); }
-    else if (p === "&n") { out += "<u>"; openFmt.push("u"); }
-    else if (p === "&m") { out += "<s>"; openFmt.push("s"); }
+    } else if (code === "&l") { out += "<strong>"; openFmt.push("strong"); }
+    else if (code === "&o") { out += "<em>"; openFmt.push("em"); }
+    else if (code === "&n") { out += "<u>"; openFmt.push("u"); }
+    else if (code === "&m") { out += "<s>"; openFmt.push("s"); }
     else {
       out += p;
     }
