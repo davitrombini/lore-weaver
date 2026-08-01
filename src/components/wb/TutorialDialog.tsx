@@ -1,4 +1,5 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Sparkles, FileText, Network, Clock, Map as MapIcon, Library, Palette, Command } from "lucide-react";
 
 export function TutorialDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
@@ -46,12 +47,22 @@ export function TutorialDialog({ open, onOpenChange }: { open: boolean; onOpenCh
               <li><code>[link](https://…)</code></li>
             </ul>
             <div className="mt-2">
-              Códigos de cor no estilo Minecraft: <code>&amp;1</code>…<code>&amp;9</code>,
+              Códigos de cor rápidos: <code>&amp;1</code>…<code>&amp;9</code>,
               <code> &amp;a</code>…<code>&amp;f</code>. Exemplos:{" "}
               <span style={{ color: "#22c55e" }}>&amp;a verde</span>,{" "}
               <span style={{ color: "#ef4444" }}>&amp;c vermelho</span>,{" "}
               <span style={{ color: "#facc15" }}>&amp;e amarelo</span>. Use{" "}
               <code>&amp;r</code> para redefinir e <code>&amp;l</code> para negrito.
+            </div>
+            <div className="mt-2">
+              Cores HEX / RGB com <code>&amp;x</code> no formato{" "}
+              <code>&amp;x&amp;R&amp;R&amp;G&amp;G&amp;B&amp;B</code>. Exemplo:{" "}
+              <code>&amp;x&amp;0&amp;0&amp;F&amp;F&amp;F&amp;F</code>. Isso permite gradientes:{" "}
+              <span className="font-bold">
+                <span style={{ color: "#00FFFF" }}>S</span>
+                <span style={{ color: "#00BBFF" }}>R</span>
+                <span style={{ color: "#0077FF" }}>S</span>
+              </span>
             </div>
           </Section>
 
@@ -71,6 +82,18 @@ export function TutorialDialog({ open, onOpenChange }: { open: boolean; onOpenCh
             </ul>
           </Section>
         </div>
+        <DialogFooter className="sm:justify-between gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => {
+              try { localStorage.setItem("void_tutorial_pref", "never"); } catch { /* ignore */ }
+              onOpenChange(false);
+            }}
+          >
+            Não mostrar novamente
+          </Button>
+          <Button onClick={() => onOpenChange(false)}>Fechar</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
