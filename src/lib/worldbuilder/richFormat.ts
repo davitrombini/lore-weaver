@@ -19,23 +19,28 @@ export function setWikiIndex(docs: { id: string; title: string }[]) {
 
 function escape(s: string) {
   return s
-    .replace(/&(?![0-9a-frlonm])/g, "&amp;")
+    .replace(/&(?![0-9a-frlonmx])/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 }
 
 function applyColorCodes(line: string): string {
-  // Split on any &X code (0-9a-f, r, l, o, n, m)
+  // Split on hex codes (&x&R&R&G&G&B&B) first, then any &X code (0-9a-f, r, l, o, n, m)
   let out = "";
   let openSpans = 0;
   let openFmt: string[] = [];
-  const parts = line.split(/(&[0-9a-frlonm])/g);
+  const parts = line.split(/(&x(?:&[0-9a-fA-F]){6}|&[0-9a-frlonm])/g);
   const closeAll = () => {
     while (openFmt.length) { out += `</${openFmt.pop()}>`; }
     while (openSpans > 0) { out += "</span>"; openSpans--; }
   };
   for (const p of parts) {
-    if (/^&[0-9a-f]$/.test(p)) {
+    if (/^&x(&[0-9a-fA-F]){6}$/.test(p)) {
+      closeAll();
+      const hex = p.slice(2).replace(/&/g, "");
+      out += `<span style="color:#${hex}">`;
+      openSpans++;
+    } else if (/^&[0-9a-f]$/.test(p)) {
       closeAll();
       out += `<span style="color:${COLOR_MAP[p[1]]}">`;
       openSpans++;
