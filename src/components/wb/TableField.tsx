@@ -136,7 +136,7 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
             <tr>
               {cols.map((c) => (
                 <th key={c.id} className="text-left px-1.5 py-1 font-medium">
-                  {onChangeColumns ? (
+                  {editableCols ? (
                     <div className="flex items-center gap-0.5">
                       <input
                         value={c.name}
@@ -238,7 +238,7 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
         <button type="button" onClick={addRow} className="text-xs px-2 py-1 rounded-md border border-border hover:bg-accent inline-flex items-center gap-1">
           <Plus className="w-3 h-3" /> Linha
         </button>
-        {onChangeColumns && (
+        {editableCols && (
           <button type="button" onClick={addCol} className="text-xs px-2 py-1 rounded-md border border-border hover:bg-accent inline-flex items-center gap-1">
             <Plus className="w-3 h-3" /> Coluna
           </button>
