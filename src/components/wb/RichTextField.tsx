@@ -122,6 +122,13 @@ export function RichTextField({ value, onChange, readOnly, placeholder }: Props)
               ))}
             </div>
             <div className="text-[10px] text-muted-foreground mt-2">Use <code>&amp;r</code> para redefinir. Também: <code>&amp;l</code> negrito, <code>&amp;o</code> itálico, <code>&amp;n</code> sublinhado.</div>
+            <button
+              type="button"
+              onClick={() => insert("&x&0&0&F&F&F&F")}
+              className="mt-2 w-full text-[10px] px-1.5 py-1 rounded border border-border hover:bg-accent text-left"
+            >
+              HEX: <code>&amp;x&amp;R&amp;R&amp;G&amp;G&amp;B&amp;B</code>
+            </button>
           </PopoverContent>
         </Popover>
       </div>
