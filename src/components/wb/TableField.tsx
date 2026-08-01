@@ -5,20 +5,14 @@ import { formatBR } from "@/lib/worldbuilder/dateUtils";
 import { evalCellEquation } from "@/lib/worldbuilder/equation";
 
 export interface TableValue {
+  columns?: TableColumn[];
   rows: Record<string, string | number | boolean>[];
 }
 
-function defaultCols(): TableColumn[] {
-  return [
-    { id: "c_" + Math.random().toString(36).slice(2, 8), name: "A", type: "text" },
-    { id: "c_" + Math.random().toString(36).slice(2, 8), name: "B", type: "number" },
-  ];
-}
-
-function normalize(value: unknown, cols: TableColumn[]): TableValue {
+function normalize(value: unknown): TableValue {
   const v = (value ?? {}) as Partial<TableValue>;
   const rows = Array.isArray(v.rows) ? v.rows : [];
-  return { rows: rows.map((r) => ({ ...r })) };
+  return { columns: Array.isArray(v.columns) ? v.columns : undefined, rows: rows.map((r) => ({ ...r })) };
 }
 
 function normColname(name: string) {
@@ -61,46 +55,51 @@ interface Props {
 }
 
 export function TableField({ columns, value, onChange, onChangeColumns, readOnly }: Props) {
-  const cols = columns.length ? columns : defaultCols();
-  const val = useMemo(() => normalize(value, cols), [value, cols]);
+  const val = useMemo(() => normalize(value), [value]);
+  // Column definitions live in a single place: the template schema when it
+  // defines columns, otherwise once inside the field value — never per row.
+  const cols = columns.length ? columns : val.columns ?? [];
+  const editableCols = columns.length
+    ? onChangeColumns
+    : (next: TableColumn[]) => onChange({ ...val, columns: next });
 
   const setCell = (rowIdx: number, colId: string, v: string | number | boolean) => {
     const rows = val.rows.map((r, i) => (i === rowIdx ? { ...r, [colId]: v } : r));
-    onChange({ rows });
+    onChange({ ...val, rows });
   };
-  const addRow = () => onChange({ rows: [...val.rows, {}] });
-  const removeRow = (idx: number) => onChange({ rows: val.rows.filter((_, i) => i !== idx) });
+  const addRow = () => onChange({ ...val, rows: [...val.rows, {}] });
+  const removeRow = (idx: number) => onChange({ ...val, rows: val.rows.filter((_, i) => i !== idx) });
   const moveRow = (idx: number, dir: -1 | 1) => {
     const next = idx + dir;
     if (next < 0 || next >= val.rows.length) return;
     const rows = [...val.rows];
     [rows[idx], rows[next]] = [rows[next], rows[idx]];
-    onChange({ rows });
+    onChange({ ...val, rows });
   };
 
   // column edits
   const addCol = () => {
-    if (!onChangeColumns) return;
-    onChangeColumns([...cols, { id: "c_" + Math.random().toString(36).slice(2, 8), name: `Col ${cols.length + 1}`, type: "text" }]);
+    if (!editableCols) return;
+    editableCols([...cols, { id: "c_" + Math.random().toString(36).slice(2, 8), name: `Col ${cols.length + 1}`, type: "text" }]);
   };
   const removeCol = (id: string) => {
-    if (!onChangeColumns) return;
-    onChangeColumns(cols.filter((c) => c.id !== id));
+    if (!editableCols) return;
+    editableCols(cols.filter((c) => c.id !== id));
   };
-  const renameCol = (id: string, name: string) => onChangeColumns?.(cols.map((c) => (c.id === id ? { ...c, name } : c)));
-  const setColType = (id: string, type: TableColumnType) => onChangeColumns?.(cols.map((c) => (c.id === id ? { ...c, type } : c)));
+  const renameCol = (id: string, name: string) => editableCols?.(cols.map((c) => (c.id === id ? { ...c, name } : c)));
+  const setColType = (id: string, type: TableColumnType) => editableCols?.(cols.map((c) => (c.id === id ? { ...c, type } : c)));
   const moveCol = (id: string, dir: -1 | 1) => {
-    if (!onChangeColumns) return;
+    if (!editableCols) return;
     const idx = cols.findIndex((c) => c.id === id);
     const next = idx + dir;
     if (idx < 0 || next < 0 || next >= cols.length) return;
     const arr = [...cols];
     [arr[idx], arr[next]] = [arr[next], arr[idx]];
-    onChangeColumns(arr);
+    editableCols(arr);
   };
 
   if (readOnly) {
-    if (!val.rows.length) return <div className="text-sm text-muted-foreground italic">Tabela vazia</div>;
+    if (!val.rows.length || !cols.length) return <div className="text-sm text-muted-foreground italic">Tabela vazia</div>;
     return (
       <div className="overflow-auto border border-border rounded-md">
         <table className="w-full text-sm">
@@ -137,7 +136,7 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
             <tr>
               {cols.map((c) => (
                 <th key={c.id} className="text-left px-1.5 py-1 font-medium">
-                  {onChangeColumns ? (
+                  {editableCols ? (
                     <div className="flex items-center gap-0.5">
                       <input
                         value={c.name}
@@ -239,7 +238,7 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
         <button type="button" onClick={addRow} className="text-xs px-2 py-1 rounded-md border border-border hover:bg-accent inline-flex items-center gap-1">
           <Plus className="w-3 h-3" /> Linha
         </button>
-        {onChangeColumns && (
+        {editableCols && (
           <button type="button" onClick={addCol} className="text-xs px-2 py-1 rounded-md border border-border hover:bg-accent inline-flex items-center gap-1">
             <Plus className="w-3 h-3" /> Coluna
           </button>
