@@ -19,37 +19,52 @@ export function setWikiIndex(docs: { id: string; title: string }[]) {
 
 function escape(s: string) {
   return s
-    .replace(/&(?![0-9a-frlonmx])/g, "&amp;")
+    .replace(/&(?!(?:x(?:&[0-9a-f]){6})|[0-9a-frlonm])/gi, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 }
 
 function applyColorCodes(line: string): string {
-  // Split on hex codes (&x&R&R&G&G&B&B) first, then any &X code (0-9a-f, r, l, o, n, m)
+  // Supports &0..&f palette codes, hex codes (&x&R&R&G&G&B&B), &r reset and
+  // the formatting codes &l &o &n &m. Tags are always properly nested.
   let out = "";
   let openSpans = 0;
-  let openFmt: string[] = [];
-  const parts = line.split(/(&x(?:&[0-9a-fA-F]){6}|&[0-9a-frlonm])/g);
+  const openFmt: string[] = [];
+  const closeFmt = () => { for (let i = openFmt.length - 1; i >= 0; i--) out += `</${openFmt[i]}>`; };
+  const reopenFmt = () => { for (const t of openFmt) out += `<${t}>`; };
   const closeAll = () => {
-    while (openFmt.length) { out += `</${openFmt.pop()}>`; }
+    closeFmt();
+    openFmt.length = 0;
     while (openSpans > 0) { out += "</span>"; openSpans--; }
   };
+  const setColor = (css: string) => {
+    // Swap the color while preserving any active bold/italic/underline state.
+    closeFmt();
+    while (openSpans > 0) { out += "</span>"; openSpans--; }
+    out += `<span style="color:${css}">`;
+    openSpans++;
+    reopenFmt();
+  };
+  const openTag = (tag: string) => {
+    if (openFmt.includes(tag)) return;
+    out += `<${tag}>`;
+    openFmt.push(tag);
+  };
+
+  const parts = line.split(/(&x(?:&[0-9a-f]){6}|&[0-9a-frlonm])/gi);
   for (const p of parts) {
-    if (/^&x(&[0-9a-fA-F]){6}$/.test(p)) {
+    if (!p) continue;
+    const code = p.toLowerCase();
+    if (/^&x(&[0-9a-f]){6}$/.test(code)) {
+      setColor("#" + code.slice(2).replace(/&/g, ""));
+    } else if (/^&[0-9a-f]$/.test(code)) {
+      setColor(COLOR_MAP[code[1]]);
+    } else if (code === "&r") {
       closeAll();
-      const hex = p.slice(2).replace(/&/g, "");
-      out += `<span style="color:#${hex}">`;
-      openSpans++;
-    } else if (/^&[0-9a-f]$/.test(p)) {
-      closeAll();
-      out += `<span style="color:${COLOR_MAP[p[1]]}">`;
-      openSpans++;
-    } else if (p === "&r") {
-      closeAll();
-    } else if (p === "&l") { out += "<strong>"; openFmt.push("strong"); }
-    else if (p === "&o") { out += "<em>"; openFmt.push("em"); }
-    else if (p === "&n") { out += "<u>"; openFmt.push("u"); }
-    else if (p === "&m") { out += "<s>"; openFmt.push("s"); }
+    } else if (code === "&l") { openTag("strong"); }
+    else if (code === "&o") { openTag("em"); }
+    else if (code === "&n") { openTag("u"); }
+    else if (code === "&m") { openTag("s"); }
     else {
       out += p;
     }
