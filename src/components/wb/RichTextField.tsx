@@ -1,9 +1,47 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { renderRichText } from "@/lib/worldbuilder/richFormat";
-import { Eye, Edit3, Palette } from "lucide-react";
+import { Eye, Edit3, Palette, Pipette, Rainbow } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { COLOR_CODE_LEGEND } from "@/lib/worldbuilder/richFormat";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+function hexToCode(hex: string): string {
+  const h = hex.replace("#", "").toUpperCase();
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h.padEnd(6, "0").slice(0, 6);
+  return "&x" + full.split("").map((c) => "&" + c).join("");
+}
+
+function lerpHex(a: string, b: string, t: number): string {
+  const p = (s: string) => {
+    const h = s.replace("#", "");
+    const f = h.length === 3 ? h.split("").map((c) => c + c).join("") : h.padEnd(6, "0").slice(0, 6);
+    return [parseInt(f.slice(0, 2), 16), parseInt(f.slice(2, 4), 16), parseInt(f.slice(4, 6), 16)];
+  };
+  const [r1, g1, b1] = p(a);
+  const [r2, g2, b2] = p(b);
+  const mix = (x: number, y: number) => Math.round(x + (y - x) * t).toString(16).padStart(2, "0");
+  return `#${mix(r1, r2)}${mix(g1, g2)}${mix(b1, b2)}`;
+}
+
+function gradientCode(text: string, stops: string[]): string {
+  const chars = [...text];
+  const colorAt = (i: number) => {
+    if (stops.length === 1) return stops[0];
+    const n = chars.length > 1 ? i / (chars.length - 1) : 0;
+    const seg = Math.min(Math.floor(n * (stops.length - 1)), stops.length - 2);
+    const local = (n - seg / (stops.length - 1)) * (stops.length - 1);
+    return lerpHex(stops[seg], stops[seg + 1], Math.max(0, Math.min(1, local)));
+  };
+  let out = "";
+  chars.forEach((ch, i) => {
+    if (ch === " ") { out += ch; return; }
+    out += hexToCode(colorAt(i)) + ch;
+  });
+  return out + "&r";
+}
 
 function useWikiClicks(ref: React.RefObject<HTMLDivElement | null>) {
   useEffect(() => {
@@ -82,6 +120,48 @@ export function RichTextField({ value, onChange, readOnly, placeholder }: Props)
     });
   };
 
+  // Wrap the current selection with before/after; if nothing is selected,
+  // insert the placeholder and select it so the user can type over it.
+  const wrap = (before: string, after: string, placeholder = "texto") => {
+    const ta = areaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart, end = ta.selectionEnd;
+    const selected = src.slice(start, end);
+    const body = selected || placeholder;
+    const next = src.slice(0, start) + before + body + after + src.slice(end);
+    onChange?.(next);
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.selectionStart = start + before.length;
+      ta.selectionEnd = start + before.length + body.length;
+    });
+  };
+
+  // Prefix line-based constructs (headings, lists, quotes) on the selection.
+  const prefixLines = (prefix: string) => {
+    const ta = areaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart, end = ta.selectionEnd;
+    const lineStart = src.lastIndexOf("\n", start - 1) + 1;
+    const selected = src.slice(lineStart, end) || "item";
+    const replaced = selected.split("\n").map((l) => prefix + l).join("\n");
+    const next = src.slice(0, lineStart) + replaced + src.slice(end);
+    onChange?.(next);
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.selectionStart = lineStart + prefix.length;
+      ta.selectionEnd = lineStart + replaced.length;
+    });
+  };
+
+  const selectedText = () => {
+    const ta = areaRef.current;
+    if (!ta) return "";
+    return src.slice(ta.selectionStart, ta.selectionEnd);
+  };
+
+  const applyColor = (hex: string) => wrap(hexToCode(hex), "&r");
+
   return (
     <div className="rounded-md border border-input bg-background">
       <div className="flex items-center gap-1 px-2 py-1 border-b border-border/60">
@@ -93,12 +173,15 @@ export function RichTextField({ value, onChange, readOnly, placeholder }: Props)
           {preview ? <><Edit3 className="w-3 h-3" /> Editar</> : <><Eye className="w-3 h-3" /> Visualizar</>}
         </button>
         <div className="w-px h-4 bg-border mx-1" />
-        <button type="button" onClick={() => insert("**texto**")} className="text-xs px-1.5 py-1 rounded hover:bg-accent font-bold" title="Negrito">B</button>
-        <button type="button" onClick={() => insert("*texto*")} className="text-xs px-1.5 py-1 rounded hover:bg-accent italic" title="Itálico">I</button>
-        <button type="button" onClick={() => insert("## Título\n")} className="text-xs px-1.5 py-1 rounded hover:bg-accent" title="Cabeçalho">H</button>
-        <button type="button" onClick={() => insert("- item\n")} className="text-xs px-1.5 py-1 rounded hover:bg-accent" title="Lista">•</button>
-        <button type="button" onClick={() => insert("> citação\n")} className="text-xs px-1.5 py-1 rounded hover:bg-accent" title="Citação">&gt;</button>
-        <button type="button" onClick={() => insert("[texto](https://)")} className="text-xs px-1.5 py-1 rounded hover:bg-accent" title="Link">🔗</button>
+        <button type="button" onClick={() => wrap("**", "**")} className="text-xs px-1.5 py-1 rounded hover:bg-accent font-bold" title="Negrito">B</button>
+        <button type="button" onClick={() => wrap("*", "*")} className="text-xs px-1.5 py-1 rounded hover:bg-accent italic" title="Itálico">I</button>
+        <button type="button" onClick={() => wrap("&n", "&r")} className="text-xs px-1.5 py-1 rounded hover:bg-accent underline" title="Sublinhado">U</button>
+        <button type="button" onClick={() => wrap("&m", "&r")} className="text-xs px-1.5 py-1 rounded hover:bg-accent line-through" title="Tachado">S</button>
+        <button type="button" onClick={() => wrap("`", "`")} className="text-xs px-1.5 py-1 rounded hover:bg-accent font-mono" title="Código">{"</>"}</button>
+        <button type="button" onClick={() => prefixLines("## ")} className="text-xs px-1.5 py-1 rounded hover:bg-accent" title="Cabeçalho">H</button>
+        <button type="button" onClick={() => prefixLines("- ")} className="text-xs px-1.5 py-1 rounded hover:bg-accent" title="Lista">•</button>
+        <button type="button" onClick={() => prefixLines("> ")} className="text-xs px-1.5 py-1 rounded hover:bg-accent" title="Citação">&gt;</button>
+        <button type="button" onClick={() => wrap("[", "](https://)")} className="text-xs px-1.5 py-1 rounded hover:bg-accent" title="Link">🔗</button>
         <Popover>
           <PopoverTrigger asChild>
             <button type="button" className="text-xs px-1.5 py-1 rounded hover:bg-accent inline-flex items-center gap-1" title="Códigos de cor">
@@ -112,7 +195,7 @@ export function RichTextField({ value, onChange, readOnly, placeholder }: Props)
                 <button
                   key={c.code}
                   type="button"
-                  onClick={() => insert(c.code)}
+                  onClick={() => wrap(c.code, "&r")}
                   className="flex items-center gap-1 text-[10px] px-1 py-1 rounded hover:bg-accent"
                   title={`${c.code} ${c.label}`}
                 >
@@ -122,16 +205,36 @@ export function RichTextField({ value, onChange, readOnly, placeholder }: Props)
               ))}
             </div>
             <div className="text-[10px] text-muted-foreground mt-2">Use <code>&amp;r</code> para redefinir. Também: <code>&amp;l</code> negrito, <code>&amp;o</code> itálico, <code>&amp;n</code> sublinhado.</div>
-            <button
-              type="button"
-              onClick={() => insert("&x&0&0&F&F&F&F")}
-              className="mt-2 w-full text-[10px] px-1.5 py-1 rounded border border-border hover:bg-accent text-left"
-            >
-              HEX: <code>&amp;x&amp;R&amp;R&amp;G&amp;G&amp;B&amp;B</code>
-            </button>
           </PopoverContent>
         </Popover>
+        <ColorPickerButton onApply={applyColor} />
+        <button
+          type="button"
+          onClick={() => { setGradText(selectedText()); setGradOpen(true); }}
+          className="text-xs px-1.5 py-1 rounded hover:bg-accent inline-flex items-center gap-1"
+          title="Gradiente HEX"
+        >
+          <Rainbow className="w-3 h-3" />
+        </button>
       </div>
+      <GradientDialog
+        open={gradOpen}
+        onOpenChange={setGradOpen}
+        text={gradText}
+        setText={setGradText}
+        onInsert={(code) => {
+          const ta = areaRef.current;
+          const start = ta ? ta.selectionStart : src.length;
+          const end = ta ? ta.selectionEnd : src.length;
+          const next = src.slice(0, start) + code + src.slice(end);
+          onChange?.(next);
+          setGradOpen(false);
+          requestAnimationFrame(() => {
+            ta?.focus();
+            if (ta) ta.selectionStart = ta.selectionEnd = start + code.length;
+          });
+        }}
+      />
       {preview ? (
         <div
           ref={previewRef}
