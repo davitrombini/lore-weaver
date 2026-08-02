@@ -258,3 +258,102 @@ export function RichTextField({ value, onChange, readOnly, placeholder }: Props)
     </div>
   );
 }
+function ColorPickerButton({ onApply }: { onApply: (hex: string) => void }) {
+  const [hex, setHex] = useState("#7dd3fc");
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button type="button" className="text-xs px-1.5 py-1 rounded hover:bg-accent inline-flex items-center gap-1" title="Cor HEX personalizada">
+          <Pipette className="w-3 h-3" />
+          <span className="w-3 h-3 rounded border border-border" style={{ background: hex }} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-60 p-3 space-y-2">
+        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Cor personalizada</div>
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            value={/^#[0-9a-fA-F]{6}$/.test(hex) ? hex : "#ffffff"}
+            onChange={(e) => setHex(e.target.value)}
+            className="h-8 w-10 rounded bg-transparent border border-border cursor-pointer"
+          />
+          <Input value={hex} onChange={(e) => setHex(e.target.value)} className="h-8 text-xs font-mono" />
+        </div>
+        <div className="text-[10px] text-muted-foreground font-mono break-all">{hexToCode(hex)}</div>
+        <Button size="sm" className="w-full h-7 text-xs" onClick={() => onApply(hex)}>
+          Aplicar à seleção
+        </Button>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+interface GradProps {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  text: string;
+  setText: (v: string) => void;
+  onInsert: (code: string) => void;
+}
+
+function GradientDialog({ open, onOpenChange, text, setText, onInsert }: GradProps) {
+  const [stops, setStops] = useState<string[]>(["#22d3ee", "#a855f7"]);
+  const body = text || "Texto do gradiente";
+  const code = gradientCode(body, stops);
+
+  const setStop = (i: number, v: string) => setStops((s) => s.map((c, j) => (j === i ? v : c)));
+  const addStop = () => setStops((s) => [...s, s[s.length - 1]]);
+  const removeStop = (i: number) => setStops((s) => (s.length > 2 ? s.filter((_, j) => j !== i) : s));
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Gradiente HEX</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Texto</div>
+            <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Escreva o texto…" />
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Cores</div>
+            <div className="flex flex-wrap items-center gap-2">
+              {stops.map((c, i) => (
+                <div key={i} className="flex items-center gap-1">
+                  <input
+                    type="color"
+                    value={/^#[0-9a-fA-F]{6}$/.test(c) ? c : "#ffffff"}
+                    onChange={(e) => setStop(i, e.target.value)}
+                    className="h-8 w-9 rounded bg-transparent border border-border cursor-pointer"
+                  />
+                  <Input value={c} onChange={(e) => setStop(i, e.target.value)} className="h-8 w-24 text-xs font-mono" />
+                  {stops.length > 2 && (
+                    <button type="button" onClick={() => removeStop(i)} className="text-xs text-muted-foreground hover:text-destructive px-1">×</button>
+                  )}
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={addStop}>+ Cor</Button>
+            </div>
+          </div>
+          <div
+            className="h-2 rounded"
+            style={{ background: `linear-gradient(to right, ${stops.join(", ")})` }}
+          />
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Prévia</div>
+            <div
+              className="rounded border border-border px-3 py-2 text-sm"
+              dangerouslySetInnerHTML={{ __html: renderRichText(code) }}
+            />
+          </div>
+          <div className="text-[10px] font-mono text-muted-foreground break-all max-h-20 overflow-auto">{code}</div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={() => onInsert(code)}>Inserir</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
