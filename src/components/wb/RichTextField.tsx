@@ -298,12 +298,24 @@ interface GradProps {
 
 function GradientDialog({ open, onOpenChange, text, setText, onInsert }: GradProps) {
   const [stops, setStops] = useState<string[]>(["#22d3ee", "#a855f7"]);
+  const [copied, setCopied] = useState(false);
   const body = text || "Texto do gradiente";
   const code = gradientCode(body, stops);
+
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      // fallback
+    }
+  };
 
   const setStop = (i: number, v: string) => setStops((s) => s.map((c, j) => (j === i ? v : c)));
   const addStop = () => setStops((s) => [...s, s[s.length - 1]]);
   const removeStop = (i: number) => setStops((s) => (s.length > 2 ? s.filter((_, j) => j !== i) : s));
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
