@@ -340,7 +340,7 @@ function GradientDialog({ open, onOpenChange, text, setText, onInsert }: GradPro
                     className="h-8 w-9 rounded bg-transparent border border-border cursor-pointer"
                   />
                   <Input value={c} onChange={(e) => setStop(i, e.target.value)} className="h-8 w-24 text-xs font-mono" />
-                  {stops.length > 2 && (
+                  {stops.length > 1 && (
                     <button type="button" onClick={() => removeStop(i)} className="text-xs text-muted-foreground hover:text-destructive px-1">×</button>
                   )}
                 </div>
