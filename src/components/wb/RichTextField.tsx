@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { renderRichText } from "@/lib/worldbuilder/richFormat";
-import { Eye, Edit3, Palette, Pipette, Rainbow } from "lucide-react";
+import { Eye, Edit3, Palette, Pipette, Rainbow, Copy, Check } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { COLOR_CODE_LEGEND } from "@/lib/worldbuilder/richFormat";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
