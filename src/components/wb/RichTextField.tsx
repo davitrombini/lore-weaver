@@ -359,7 +359,20 @@ function GradientDialog({ open, onOpenChange, text, setText, onInsert }: GradPro
               dangerouslySetInnerHTML={{ __html: renderRichText(code) }}
             />
           </div>
-          <div className="text-[10px] font-mono text-muted-foreground break-all max-h-20 overflow-auto">{code}</div>
+          <div className="flex items-center gap-2">
+            <div className="text-[10px] font-mono text-muted-foreground break-all max-h-20 overflow-auto flex-1">{code}</div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs shrink-0"
+              onClick={copyCode}
+              title="Copiar código do gradiente"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 mr-1" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
+              {copied ? "Copiado" : "Copiar"}
+            </Button>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
