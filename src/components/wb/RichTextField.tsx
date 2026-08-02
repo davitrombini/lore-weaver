@@ -314,7 +314,7 @@ function GradientDialog({ open, onOpenChange, text, setText, onInsert }: GradPro
 
   const setStop = (i: number, v: string) => setStops((s) => s.map((c, j) => (j === i ? v : c)));
   const addStop = () => setStops((s) => [...s, s[s.length - 1]]);
-  const removeStop = (i: number) => setStops((s) => (s.length > 2 ? s.filter((_, j) => j !== i) : s));
+  const removeStop = (i: number) => setStops((s) => (s.length > 1 ? s.filter((_, j) => j !== i) : s));
 
 
   return (
