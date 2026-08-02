@@ -88,6 +88,8 @@ function legacyHtmlToText(html: string): string {
 
 export function RichTextField({ value, onChange, readOnly, placeholder }: Props) {
   const [preview, setPreview] = useState(false);
+  const [gradOpen, setGradOpen] = useState(false);
+  const [gradText, setGradText] = useState("");
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const readRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
