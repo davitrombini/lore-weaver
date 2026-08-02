@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { renderRichText } from "@/lib/worldbuilder/richFormat";
-import { Eye, Edit3, Palette, Pipette, Rainbow } from "lucide-react";
+import { Eye, Edit3, Palette, Pipette, Rainbow, Copy, Check } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { COLOR_CODE_LEGEND } from "@/lib/worldbuilder/richFormat";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -298,12 +298,24 @@ interface GradProps {
 
 function GradientDialog({ open, onOpenChange, text, setText, onInsert }: GradProps) {
   const [stops, setStops] = useState<string[]>(["#22d3ee", "#a855f7"]);
+  const [copied, setCopied] = useState(false);
   const body = text || "Texto do gradiente";
   const code = gradientCode(body, stops);
+
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      // fallback
+    }
+  };
 
   const setStop = (i: number, v: string) => setStops((s) => s.map((c, j) => (j === i ? v : c)));
   const addStop = () => setStops((s) => [...s, s[s.length - 1]]);
   const removeStop = (i: number) => setStops((s) => (s.length > 2 ? s.filter((_, j) => j !== i) : s));
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -347,7 +359,20 @@ function GradientDialog({ open, onOpenChange, text, setText, onInsert }: GradPro
               dangerouslySetInnerHTML={{ __html: renderRichText(code) }}
             />
           </div>
-          <div className="text-[10px] font-mono text-muted-foreground break-all max-h-20 overflow-auto">{code}</div>
+          <div className="flex items-center gap-2">
+            <div className="text-[10px] font-mono text-muted-foreground break-all max-h-20 overflow-auto flex-1">{code}</div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs shrink-0"
+              onClick={copyCode}
+              title="Copiar código do gradiente"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 mr-1" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
+              {copied ? "Copiado" : "Copiar"}
+            </Button>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
