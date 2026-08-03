@@ -26,8 +26,42 @@ function lerpHex(a: string, b: string, t: number): string {
   return `#${mix(r1, r2)}${mix(g1, g2)}${mix(b1, b2)}`;
 }
 
-function gradientCode(text: string, stops: string[]): string {
+const STYLE_OPTIONS: { code: string; label: string; className: string }[] = [
+  { code: "&l", label: "Negrito", className: "font-bold" },
+  { code: "&o", label: "Itálico", className: "italic" },
+  { code: "&n", label: "Sublinhado", className: "underline" },
+  { code: "&m", label: "Tachado", className: "line-through" },
+];
+
+function StyleToggles({ styles, setStyles }: { styles: string[]; setStyles: (v: string[]) => void }) {
+  const toggle = (code: string) =>
+    setStyles(styles.includes(code) ? styles.filter((c) => c !== code) : [...styles, code]);
+  return (
+    <div className="flex items-center gap-1">
+      {STYLE_OPTIONS.map((s) => (
+        <button
+          key={s.code}
+          type="button"
+          onClick={() => toggle(s.code)}
+          title={s.label}
+          className={cn(
+            "w-7 h-7 rounded border text-xs",
+            s.className,
+            styles.includes(s.code)
+              ? "border-primary bg-primary/20 text-foreground"
+              : "border-border text-muted-foreground hover:bg-accent",
+          )}
+        >
+          {s.label[0]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function gradientCode(text: string, stops: string[], styles: string[] = []): string {
   const chars = [...text];
+  const st = styles.join("");
   const colorAt = (i: number) => {
     if (stops.length === 1) return stops[0];
     const n = chars.length > 1 ? i / (chars.length - 1) : 0;
@@ -38,7 +72,7 @@ function gradientCode(text: string, stops: string[]): string {
   let out = "";
   chars.forEach((ch, i) => {
     if (ch === " ") { out += ch; return; }
-    out += hexToCode(colorAt(i)) + ch;
+    out += hexToCode(colorAt(i)) + st + ch;
   });
   return out + "&r";
 }
@@ -162,7 +196,7 @@ export function RichTextField({ value, onChange, readOnly, placeholder }: Props)
     return src.slice(ta.selectionStart, ta.selectionEnd);
   };
 
-  const applyColor = (hex: string) => wrap(hexToCode(hex), "&r");
+  const applyColor = (prefix: string) => wrap(prefix, "&r");
 
   return (
     <div className="rounded-md border border-input bg-background">
@@ -258,8 +292,22 @@ export function RichTextField({ value, onChange, readOnly, placeholder }: Props)
     </div>
   );
 }
-function ColorPickerButton({ onApply }: { onApply: (hex: string) => void }) {
+function ColorPickerButton({ onApply }: { onApply: (prefix: string) => void }) {
   const [hex, setHex] = useState("#7dd3fc");
+  const [styles, setStyles] = useState<string[]>([]);
+  const [text, setText] = useState("");
+  const [copied, setCopied] = useState(false);
+  const prefix = hexToCode(hex) + styles.join("");
+  const fullCode = text ? `${prefix}${text}&r` : prefix;
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(fullCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      // ignore
+    }
+  };
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -268,7 +316,7 @@ function ColorPickerButton({ onApply }: { onApply: (hex: string) => void }) {
           <span className="w-3 h-3 rounded border border-border" style={{ background: hex }} />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-60 p-3 space-y-2">
+      <PopoverContent className="w-64 p-3 space-y-2">
         <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Cor personalizada</div>
         <div className="flex items-center gap-2">
           <input
@@ -279,9 +327,25 @@ function ColorPickerButton({ onApply }: { onApply: (hex: string) => void }) {
           />
           <Input value={hex} onChange={(e) => setHex(e.target.value)} className="h-8 text-xs font-mono" />
         </div>
-        <div className="text-[10px] text-muted-foreground font-mono break-all">{hexToCode(hex)}</div>
-        <Button size="sm" className="w-full h-7 text-xs" onClick={() => onApply(hex)}>
+        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Estilos</div>
+        <StyleToggles styles={styles} setStyles={setStyles} />
+        <Input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Texto (opcional, para copiar)"
+          className="h-8 text-xs"
+        />
+        <div
+          className="rounded border border-border px-2 py-1 text-sm min-h-8"
+          dangerouslySetInnerHTML={{ __html: renderRichText(text ? fullCode : `${prefix}Prévia&r`) }}
+        />
+        <div className="text-[10px] text-muted-foreground font-mono break-all">{fullCode}</div>
+        <Button size="sm" className="w-full h-7 text-xs" onClick={() => onApply(prefix)}>
           Aplicar à seleção
+        </Button>
+        <Button size="sm" variant="outline" className="w-full h-7 text-xs" onClick={copyCode}>
+          {copied ? <Check className="w-3.5 h-3.5 mr-1" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
+          {copied ? "Copiado" : "Copiar código"}
         </Button>
       </PopoverContent>
     </Popover>
@@ -298,9 +362,10 @@ interface GradProps {
 
 function GradientDialog({ open, onOpenChange, text, setText, onInsert }: GradProps) {
   const [stops, setStops] = useState<string[]>(["#22d3ee", "#a855f7"]);
+  const [styles, setStyles] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
   const body = text || "Texto do gradiente";
-  const code = gradientCode(body, stops);
+  const code = gradientCode(body, stops, styles);
 
   const copyCode = async () => {
     try {
@@ -352,6 +417,10 @@ function GradientDialog({ open, onOpenChange, text, setText, onInsert }: GradPro
             className="h-2 rounded"
             style={{ background: `linear-gradient(to right, ${stops.join(", ")})` }}
           />
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Estilos</div>
+            <StyleToggles styles={styles} setStyles={setStyles} />
+          </div>
           <div>
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Prévia</div>
             <div

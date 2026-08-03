@@ -15,6 +15,9 @@ import { TemplateManager } from "@/components/wb/TemplateManager";
 import { TemplateLibrary } from "@/components/wb/TemplateLibrary";
 import { TutorialDialog } from "@/components/wb/TutorialDialog";
 import { MainMenu } from "@/components/wb/MainMenu";
+import { AssistantPanel } from "@/components/wb/AssistantPanel";
+import { Toaster } from "@/components/ui/sonner";
+import { Bot } from "lucide-react";
 import { ModalsProvider, useModals } from "@/components/wb/confirm";
 import type { ProjectMeta, ProjectsIndex, WorkspaceState } from "@/lib/worldbuilder/types";
 
@@ -164,6 +167,7 @@ function Shell({ project, onExit, onRename, onIconChange, onIconColorChange }: S
   const [tplOpen, setTplOpen] = useState(false);
   const [libOpen, setLibOpen] = useState(false);
   const [tutOpen, setTutOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const activeDoc = state.documents.find((d) => d.id === state.activeTab);
 
   useEffect(() => {
@@ -231,6 +235,18 @@ function Shell({ project, onExit, onRename, onIconChange, onIconColorChange }: S
         </div>
       </main>
       <CommandPalette open={cmdOpen} setOpen={setCmdOpen} onOpenTemplates={() => setTplOpen(true)} />
+      <AssistantPanel open={aiOpen} onOpenChange={setAiOpen} />
+      {!aiOpen && (
+        <button
+          type="button"
+          onClick={() => setAiOpen(true)}
+          title="Assistente IA"
+          className="fixed bottom-5 right-5 z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 transition-transform"
+        >
+          <Bot className="w-5 h-5" />
+        </button>
+      )}
+      <Toaster />
       <TemplateManager open={tplOpen} onOpenChange={setTplOpen} onOpenLibrary={() => { setTplOpen(false); setLibOpen(true); }} />
       <TemplateLibrary open={libOpen} onOpenChange={setLibOpen} />
       <TutorialDialog open={tutOpen} onOpenChange={setTutOpen} />
