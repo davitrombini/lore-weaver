@@ -33,7 +33,7 @@ export function Sidebar({
   project, onExit, onRename, onIconChange, onIconColorChange, onExport,
   onOpenCommand, onOpenTemplates, onOpenLibrary, onOpenTutorial,
 }: Props) {
-  const { state, openTab, createDocument, deleteDocument, setView, setActiveTab, setSettings, createTemplate } = useWorld();
+  const { state, openTab, createDocument, deleteDocument, deleteTemplate, setView, setActiveTab, setSettings, createTemplate } = useWorld();
   const { confirm, prompt } = useModals();
   const [iconOpen, setIconOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
@@ -49,7 +49,7 @@ export function Sidebar({
         .filter((d) => d.templateId === tplId && !d.deletedAt && d.title.toLowerCase().includes(lower))
         .sort((a, b) => a.title.localeCompare(b.title));
     const childrenOf = (parentId: string | null) =>
-      state.templates.filter((t) => (t.parentId ?? null) === parentId);
+      state.templates.filter((t) => !t.deletedAt && (t.parentId ?? null) === parentId);
     return { childrenOf, docsFor };
   }, [state.templates, state.documents, filter]);
 
@@ -202,11 +202,20 @@ export function Sidebar({
             onDeleteDoc={async (d) => {
               const ok = await confirm({
                 title: `Excluir "${d.title}"?`,
-                description: "Esta ação não pode ser desfeita.",
+                description: "O documento vai para a lixeira e pode ser restaurado.",
                 confirmText: "Excluir",
                 destructive: true,
               });
               if (ok) deleteDocument(d.id);
+            }}
+            onDeleteTemplate={async (t) => {
+              const ok = await confirm({
+                title: `Mover "${t.name}" para a lixeira?`,
+                description: "A categoria, suas subcategorias e todos os documentos vão para a lixeira.",
+                confirmText: "Mover para lixeira",
+                destructive: true,
+              });
+              if (ok) deleteTemplate(t.id);
             }}
             onOpenTemplateManager={onOpenTemplates}
           />
