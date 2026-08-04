@@ -38,7 +38,7 @@ const FIELD_TYPES: { value: FieldType; label: string }[] = [
 export function TemplateManager({ open, onOpenChange, onOpenLibrary }: { open: boolean; onOpenChange: (o: boolean) => void; onOpenLibrary?: () => void }) {
   const { state, createTemplate, updateTemplate, deleteTemplate, addField, removeField, updateField, moveField } = useWorld();
   const { confirm } = useModals();
-  const [selectedId, setSelectedId] = useState<string | null>(state.templates[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(state.templates.find((t) => !t.deletedAt)?.id ?? null);
   const selected = state.templates.find((t) => t.id === selectedId) ?? null;
 
   const [newField, setNewField] = useState<{ name: string; type: FieldType; target?: string; multi?: boolean; options?: string }>({
@@ -64,7 +64,7 @@ export function TemplateManager({ open, onOpenChange, onOpenLibrary }: { open: b
             {(() => {
               const renderList = (parentId: string | null, depth: number): ReactNode[] => {
                 return state.templates
-                  .filter((t) => (t.parentId ?? null) === parentId)
+                  .filter((t) => !t.deletedAt && (t.parentId ?? null) === parentId)
                   .flatMap((t) => [
                     <button
                       key={t.id}
@@ -117,7 +117,7 @@ export function TemplateManager({ open, onOpenChange, onOpenLibrary }: { open: b
                   });
                   if (ok) {
                     deleteTemplate(selected.id);
-                    setSelectedId(state.templates.find((t) => t.id !== selected.id)?.id ?? null);
+                    setSelectedId(state.templates.find((t) => t.id !== selected.id && !t.deletedAt)?.id ?? null);
                   }
                 }}
                 onRemoveField={(fid) => removeField(selected.id, fid)}
@@ -212,7 +212,7 @@ function TemplateEditor({
           <SelectContent className="max-h-64">
             <SelectItem value="__none">Sem categoria pai</SelectItem>
             {state.templates
-              .filter((t) => t.id !== template.id && !isDescendant(state.templates, t.id, template.id))
+              .filter((t) => !t.deletedAt && t.id !== template.id && !isDescendant(state.templates, t.id, template.id))
               .map((t) => (
                 <SelectItem key={t.id} value={t.id}>
                   <div className="flex items-center gap-2"><Icon name={t.icon} className="w-3.5 h-3.5" style={{ color: t.color }} /> {t.name}</div>
@@ -331,7 +331,7 @@ function TemplateEditor({
                 <SelectTrigger><SelectValue placeholder="Target template" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__any">Any template</SelectItem>
-                  {state.templates.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                  {state.templates.filter((t) => !t.deletedAt).map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select
