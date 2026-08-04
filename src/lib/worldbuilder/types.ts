@@ -36,12 +36,14 @@ export interface Template {
   bgColor?: string;
   fields: FieldDef[];
   parentId?: string | null; // for sub-categories (nested templates)
+  deletedAt?: number | null;
 }
 
 export interface DocumentEntry {
   id: string;
   templateId: string;
   title: string;
+  icon?: string;
   values: Record<string, unknown>;
   createdAt: number;
   updatedAt: number;

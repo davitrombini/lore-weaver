@@ -8,6 +8,7 @@ export function StatsView() {
   const stats = useMemo(() => {
     const active = state.documents.filter((d) => !d.deletedAt);
     const counts = state.templates
+      .filter((t) => !t.deletedAt)
       .map((t) => ({ tpl: t, count: active.filter((d) => d.templateId === t.id).length }))
       .sort((a, b) => b.count - a.count);
     const max = Math.max(1, ...counts.map((c) => c.count));
@@ -18,7 +19,7 @@ export function StatsView() {
     <div className="h-full overflow-auto p-8">
       <div className="max-w-3xl mx-auto">
         <h2 className="text-2xl font-semibold mb-1">Estatísticas</h2>
-        <p className="text-sm text-muted-foreground mb-6">{stats.total} documentos ativos · {stats.deleted} na lixeira · {state.templates.length} categorias.</p>
+        <p className="text-sm text-muted-foreground mb-6">{stats.total} documentos ativos · {stats.deleted} na lixeira · {state.templates.filter((t) => !t.deletedAt).length} categorias.</p>
         <div className="space-y-3">
           {stats.counts.map(({ tpl, count }) => (
             <div key={tpl.id} className="rounded-lg border border-border bg-card p-3">

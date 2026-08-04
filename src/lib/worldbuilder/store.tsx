@@ -11,6 +11,8 @@ type Action =
   | { type: "addTemplate"; template: Template }
   | { type: "updateTemplate"; template: Template }
   | { type: "deleteTemplate"; id: string }
+  | { type: "restoreTemplate"; id: string }
+  | { type: "purgeTemplate"; id: string }
   | { type: "addDocument"; doc: DocumentEntry }
   | { type: "updateDocument"; id: string; patch: Partial<DocumentEntry> }
   | { type: "deleteDocument"; id: string }
@@ -41,6 +43,25 @@ function initial(seeded = true): WorkspaceState {
 }
 
 function reducer(state: WorkspaceState, action: Action): WorkspaceState {
+  return baseReducer(state, action);
+}
+
+function collectTree(templates: Template[], rootId: string): Set<string> {
+  const ids = new Set<string>([rootId]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const t of templates) {
+      if (!ids.has(t.id) && t.parentId && ids.has(t.parentId)) {
+        ids.add(t.id);
+        changed = true;
+      }
+    }
+  }
+  return ids;
+}
+
+function baseReducer(state: WorkspaceState, action: Action): WorkspaceState {
   switch (action.type) {
     case "hydrate":
       return action.payload;
@@ -51,14 +72,47 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
         ...state,
         templates: state.templates.map((t) => (t.id === action.template.id ? action.template : t)),
       };
-    case "deleteTemplate":
+    case "deleteTemplate": {
+      const ids = collectTree(state.templates, action.id);
+      const now = Date.now();
+      const docIds = new Set(
+        state.documents.filter((d) => ids.has(d.templateId)).map((d) => d.id),
+      );
+      const openTabs = state.openTabs.filter((t) => !docIds.has(t));
       return {
         ...state,
-        templates: state.templates
-          .filter((t) => t.id !== action.id)
-          .map((t) => (t.parentId === action.id ? { ...t, parentId: null } : t)),
-        documents: state.documents.filter((d) => d.templateId !== action.id),
+        templates: state.templates.map((t) => (ids.has(t.id) ? { ...t, deletedAt: now } : t)),
+        documents: state.documents.map((d) =>
+          docIds.has(d.id) && !d.deletedAt ? { ...d, deletedAt: now } : d,
+        ),
+        openTabs,
+        activeTab: state.activeTab && docIds.has(state.activeTab) ? openTabs[0] ?? null : state.activeTab,
       };
+    }
+    case "restoreTemplate": {
+      const ids = collectTree(state.templates, action.id);
+      const tpl = state.templates.find((t) => t.id === action.id);
+      const stamp = tpl?.deletedAt ?? 0;
+      return {
+        ...state,
+        templates: state.templates.map((t) =>
+          ids.has(t.id)
+            ? { ...t, deletedAt: null, parentId: t.id === action.id ? null : t.parentId }
+            : t,
+        ),
+        documents: state.documents.map((d) =>
+          ids.has(d.templateId) && d.deletedAt === stamp ? { ...d, deletedAt: null } : d,
+        ),
+      };
+    }
+    case "purgeTemplate": {
+      const ids = collectTree(state.templates, action.id);
+      return {
+        ...state,
+        templates: state.templates.filter((t) => !ids.has(t.id)),
+        documents: state.documents.filter((d) => !ids.has(d.templateId)),
+      };
+    }
     case "addDocument":
       return { ...state, documents: [...state.documents, action.doc] };
     case "updateDocument":
@@ -128,6 +182,8 @@ interface Ctx {
   createTemplate: (name: string, icon?: string, parentId?: string | null) => Template;
   updateTemplate: (t: Template) => void;
   deleteTemplate: (id: string) => void;
+  restoreTemplate: (id: string) => void;
+  purgeTemplate: (id: string) => void;
   addField: (templateId: string, field: Omit<FieldDef, "id">) => void;
   removeField: (templateId: string, fieldId: string) => void;
   updateField: (templateId: string, fieldId: string, patch: Partial<FieldDef>) => void;
@@ -230,6 +286,8 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
 
   const updateTemplate = useCallback((t: Template) => dispatch({ type: "updateTemplate", template: t }), [dispatch]);
   const deleteTemplate = useCallback((id: string) => dispatch({ type: "deleteTemplate", id }), [dispatch]);
+  const restoreTemplate = useCallback((id: string) => dispatch({ type: "restoreTemplate", id }), [dispatch]);
+  const purgeTemplate = useCallback((id: string) => dispatch({ type: "purgeTemplate", id }), [dispatch]);
 
   const addField = useCallback(
     (templateId: string, field: Omit<FieldDef, "id">) => {
@@ -362,7 +420,8 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
   const value = useMemo<Ctx>(
     () => ({
       state,
-      createTemplate, updateTemplate, deleteTemplate, addField, removeField, updateField, moveField,
+      createTemplate, updateTemplate, deleteTemplate, restoreTemplate, purgeTemplate,
+      addField, removeField, updateField, moveField,
       createDocument, updateDocument, deleteDocument, restoreDocument, purgeDocument,
       openTab, closeTab, setActiveTab,
       setView,
@@ -373,7 +432,7 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
       canRedo: future.current.length > 0,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state, versionRef.current, createTemplate, updateTemplate, deleteTemplate, addField, removeField, updateField, moveField, createDocument, updateDocument, deleteDocument, restoreDocument, purgeDocument, openTab, closeTab, setActiveTab, setView, addMap, updateMap, deleteMap, addPin, removePin, updatePin, setActiveMap, setSettings, replaceState, undo, redo],
+    [state, versionRef.current, createTemplate, updateTemplate, deleteTemplate, restoreTemplate, purgeTemplate, addField, removeField, updateField, moveField, createDocument, updateDocument, deleteDocument, restoreDocument, purgeDocument, openTab, closeTab, setActiveTab, setView, addMap, updateMap, deleteMap, addPin, removePin, updatePin, setActiveMap, setSettings, replaceState, undo, redo],
   );
 
   return <WorldCtx.Provider value={value}>{children}</WorldCtx.Provider>;

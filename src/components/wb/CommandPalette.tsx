@@ -39,7 +39,7 @@ export function CommandPalette({ open, setOpen, onOpenTemplates }: { open: boole
           })}
         </CommandGroup>
         <CommandGroup heading="Criar">
-          {state.templates.map((t) => (
+          {state.templates.filter((t) => !t.deletedAt).map((t) => (
             <CommandItem
               key={t.id}
               value={`novo ${t.name}`}
