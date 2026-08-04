@@ -4,13 +4,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Check, PackagePlus } from "lucide-react";
 import { TEMPLATE_COLLECTIONS } from "@/lib/worldbuilder/templateLibrary";
+import type { FieldDef, Template } from "@/lib/worldbuilder/types";
 import { useWorld } from "@/lib/worldbuilder/store";
 import { Icon } from "./icons";
 import { cn } from "@/lib/utils";
 import { useModals } from "./confirm";
 
+const uid = () => Math.random().toString(36).slice(2, 10);
+
 export function TemplateLibrary({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const { createTemplate, addField, updateTemplate, state } = useWorld();
+  const { createTemplate, updateTemplate, state } = useWorld();
   const { confirm } = useModals();
   const [query, setQuery] = useState("");
   const [activeCat, setActiveCat] = useState<string>("Todos");
@@ -32,14 +35,20 @@ export function TemplateLibrary({ open, onOpenChange }: { open: boolean; onOpenC
     });
   }, [query, activeCat, collection]);
 
+  const insert = (lib: (typeof collection)["templates"][number]) => {
+    const created = createTemplate(lib.name, lib.icon);
+    const fields: FieldDef[] = lib.fields.map((f) => ({
+      ...f,
+      id: "f_" + uid(),
+    }));
+    const full: Template = { ...created, color: lib.color, fields };
+    updateTemplate(full);
+  };
+
   const addToProject = (libId: string) => {
     const lib = collection.templates.find((t) => t.id === libId);
     if (!lib) return;
-    const created = createTemplate(lib.name, lib.icon);
-    updateTemplate({ ...created, color: lib.color });
-    for (const f of lib.fields) {
-      addField(created.id, { name: f.name, type: f.type, options: f.options, multi: f.multi, targetTemplateId: f.targetTemplateId });
-    }
+    insert(lib);
     setAdded((s) => ({ ...s, [libId]: true }));
     setTimeout(() => setAdded((s) => { const c = { ...s }; delete c[libId]; return c; }), 1500);
   };
@@ -51,13 +60,7 @@ export function TemplateLibrary({ open, onOpenChange }: { open: boolean; onOpenC
       confirmText: "Importar todos",
     });
     if (!ok) return;
-    for (const lib of collection.templates) {
-      const created = createTemplate(lib.name, lib.icon);
-      updateTemplate({ ...created, color: lib.color });
-      for (const f of lib.fields) {
-        addField(created.id, { name: f.name, type: f.type, options: f.options, multi: f.multi, targetTemplateId: f.targetTemplateId });
-      }
-    }
+    for (const lib of collection.templates) insert(lib);
   };
   void state;
 
