@@ -43,6 +43,25 @@ function initial(seeded = true): WorkspaceState {
 }
 
 function reducer(state: WorkspaceState, action: Action): WorkspaceState {
+  return baseReducer(state, action);
+}
+
+function collectTree(templates: Template[], rootId: string): Set<string> {
+  const ids = new Set<string>([rootId]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const t of templates) {
+      if (!ids.has(t.id) && t.parentId && ids.has(t.parentId)) {
+        ids.add(t.id);
+        changed = true;
+      }
+    }
+  }
+  return ids;
+}
+
+function baseReducer(state: WorkspaceState, action: Action): WorkspaceState {
   switch (action.type) {
     case "hydrate":
       return action.payload;
@@ -163,6 +182,8 @@ interface Ctx {
   createTemplate: (name: string, icon?: string, parentId?: string | null) => Template;
   updateTemplate: (t: Template) => void;
   deleteTemplate: (id: string) => void;
+  restoreTemplate: (id: string) => void;
+  purgeTemplate: (id: string) => void;
   addField: (templateId: string, field: Omit<FieldDef, "id">) => void;
   removeField: (templateId: string, fieldId: string) => void;
   updateField: (templateId: string, fieldId: string, patch: Partial<FieldDef>) => void;
@@ -265,6 +286,8 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
 
   const updateTemplate = useCallback((t: Template) => dispatch({ type: "updateTemplate", template: t }), [dispatch]);
   const deleteTemplate = useCallback((id: string) => dispatch({ type: "deleteTemplate", id }), [dispatch]);
+  const restoreTemplate = useCallback((id: string) => dispatch({ type: "restoreTemplate", id }), [dispatch]);
+  const purgeTemplate = useCallback((id: string) => dispatch({ type: "purgeTemplate", id }), [dispatch]);
 
   const addField = useCallback(
     (templateId: string, field: Omit<FieldDef, "id">) => {
@@ -397,7 +420,8 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
   const value = useMemo<Ctx>(
     () => ({
       state,
-      createTemplate, updateTemplate, deleteTemplate, addField, removeField, updateField, moveField,
+      createTemplate, updateTemplate, deleteTemplate, restoreTemplate, purgeTemplate,
+      addField, removeField, updateField, moveField,
       createDocument, updateDocument, deleteDocument, restoreDocument, purgeDocument,
       openTab, closeTab, setActiveTab,
       setView,
@@ -408,7 +432,7 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
       canRedo: future.current.length > 0,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state, versionRef.current, createTemplate, updateTemplate, deleteTemplate, addField, removeField, updateField, moveField, createDocument, updateDocument, deleteDocument, restoreDocument, purgeDocument, openTab, closeTab, setActiveTab, setView, addMap, updateMap, deleteMap, addPin, removePin, updatePin, setActiveMap, setSettings, replaceState, undo, redo],
+    [state, versionRef.current, createTemplate, updateTemplate, deleteTemplate, restoreTemplate, purgeTemplate, addField, removeField, updateField, moveField, createDocument, updateDocument, deleteDocument, restoreDocument, purgeDocument, openTab, closeTab, setActiveTab, setView, addMap, updateMap, deleteMap, addPin, removePin, updatePin, setActiveMap, setSettings, replaceState, undo, redo],
   );
 
   return <WorldCtx.Provider value={value}>{children}</WorldCtx.Provider>;
