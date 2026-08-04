@@ -11,6 +11,8 @@ type Action =
   | { type: "addTemplate"; template: Template }
   | { type: "updateTemplate"; template: Template }
   | { type: "deleteTemplate"; id: string }
+  | { type: "restoreTemplate"; id: string }
+  | { type: "purgeTemplate"; id: string }
   | { type: "addDocument"; doc: DocumentEntry }
   | { type: "updateDocument"; id: string; patch: Partial<DocumentEntry> }
   | { type: "deleteDocument"; id: string }
@@ -51,14 +53,47 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
         ...state,
         templates: state.templates.map((t) => (t.id === action.template.id ? action.template : t)),
       };
-    case "deleteTemplate":
+    case "deleteTemplate": {
+      const ids = collectTree(state.templates, action.id);
+      const now = Date.now();
+      const docIds = new Set(
+        state.documents.filter((d) => ids.has(d.templateId)).map((d) => d.id),
+      );
+      const openTabs = state.openTabs.filter((t) => !docIds.has(t));
       return {
         ...state,
-        templates: state.templates
-          .filter((t) => t.id !== action.id)
-          .map((t) => (t.parentId === action.id ? { ...t, parentId: null } : t)),
-        documents: state.documents.filter((d) => d.templateId !== action.id),
+        templates: state.templates.map((t) => (ids.has(t.id) ? { ...t, deletedAt: now } : t)),
+        documents: state.documents.map((d) =>
+          docIds.has(d.id) && !d.deletedAt ? { ...d, deletedAt: now } : d,
+        ),
+        openTabs,
+        activeTab: state.activeTab && docIds.has(state.activeTab) ? openTabs[0] ?? null : state.activeTab,
       };
+    }
+    case "restoreTemplate": {
+      const ids = collectTree(state.templates, action.id);
+      const tpl = state.templates.find((t) => t.id === action.id);
+      const stamp = tpl?.deletedAt ?? 0;
+      return {
+        ...state,
+        templates: state.templates.map((t) =>
+          ids.has(t.id)
+            ? { ...t, deletedAt: null, parentId: t.id === action.id ? null : t.parentId }
+            : t,
+        ),
+        documents: state.documents.map((d) =>
+          ids.has(d.templateId) && d.deletedAt === stamp ? { ...d, deletedAt: null } : d,
+        ),
+      };
+    }
+    case "purgeTemplate": {
+      const ids = collectTree(state.templates, action.id);
+      return {
+        ...state,
+        templates: state.templates.filter((t) => !ids.has(t.id)),
+        documents: state.documents.filter((d) => !ids.has(d.templateId)),
+      };
+    }
     case "addDocument":
       return { ...state, documents: [...state.documents, action.doc] };
     case "updateDocument":
