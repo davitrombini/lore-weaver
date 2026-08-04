@@ -283,7 +283,7 @@ export function Sidebar({
 
 function TemplateNode({
   tpl, depth, collapsed, setCollapsed, childrenOf, docsFor,
-  activeDocId, view, onOpenDoc, onCreateDoc, onAddSub, onDeleteDoc, onOpenTemplateManager,
+  activeDocId, view, onOpenDoc, onCreateDoc, onAddSub, onDeleteDoc, onDeleteTemplate, onOpenTemplateManager,
 }: {
   tpl: Template;
   depth: number;
@@ -297,6 +297,7 @@ function TemplateNode({
   onCreateDoc: (tplId: string, name: string) => void;
   onAddSub: (parent: Template) => void;
   onDeleteDoc: (d: DocumentEntry) => void;
+  onDeleteTemplate: (t: Template) => void;
   onOpenTemplateManager: () => void;
 }) {
   const isCollapsed = collapsed[tpl.id];
@@ -304,7 +305,10 @@ function TemplateNode({
   const subs = childrenOf(tpl.id);
   return (
     <div className="mb-0.5" style={{ paddingLeft: depth * 10 }}>
-      <div className="group flex items-center gap-1 px-1.5 py-1 rounded-md hover:bg-sidebar-accent/50">
+      <div
+        className="group flex items-center gap-1 px-1.5 py-1 rounded-md hover:bg-sidebar-accent/50"
+        style={{ background: tpl.bgColor, color: tpl.textColor }}
+      >
         <button
           onClick={() => setCollapsed((c) => ({ ...c, [tpl.id]: !c[tpl.id] }))}
           className="p-0.5"
@@ -337,6 +341,13 @@ function TemplateNode({
         >
           <Plus className="w-3.5 h-3.5" />
         </button>
+        <button
+          onClick={() => onDeleteTemplate(tpl)}
+          className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-sidebar-accent text-sidebar-foreground/70 hover:text-destructive"
+          title="Mover categoria para a lixeira"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
       </div>
       <AnimatePresence initial={false}>
         {!isCollapsed && (
@@ -362,6 +373,7 @@ function TemplateNode({
                 onCreateDoc={onCreateDoc}
                 onAddSub={onAddSub}
                 onDeleteDoc={onDeleteDoc}
+                onDeleteTemplate={onDeleteTemplate}
                 onOpenTemplateManager={onOpenTemplateManager}
               />
             ))}
@@ -369,13 +381,19 @@ function TemplateNode({
               <div className="text-[11px] text-sidebar-foreground/40 italic px-2 py-1">Sem entradas</div>
             )}
             {docs.map((d) => (
-              <div key={d.id} className="group flex items-center gap-1.5 rounded-md hover:bg-sidebar-accent">
+              <div
+                key={d.id}
+                className="group flex items-center gap-1.5 rounded-md hover:bg-sidebar-accent pl-1.5"
+                style={{ background: tpl.bgColor, color: tpl.textColor }}
+              >
+                <Icon name={d.icon ?? tpl.icon} className="w-3 h-3 shrink-0" style={{ color: tpl.color }} />
                 <button
                   onClick={() => onOpenDoc(d.id)}
                   className={cn(
-                    "flex-1 text-left px-2 py-1 text-sm truncate text-sidebar-foreground/80 hover:text-sidebar-foreground",
+                    "flex-1 text-left px-1 py-1 text-sm truncate text-sidebar-foreground/80 hover:text-sidebar-foreground",
                     activeDocId === d.id && view === "document" && "text-primary font-medium",
                   )}
+                  style={tpl.textColor ? { color: tpl.textColor } : undefined}
                 >
                   {d.title}
                 </button>
