@@ -18,13 +18,16 @@ Você recebe um resumo em JSON do projeto do usuário (templates/categorias e do
 
 \`\`\`void-action
 {"actions":[
-  {"type":"createTemplate","name":"Nome","icon":"Users","fields":[{"name":"Idade","type":"number"},{"name":"Papel","type":"select","options":["Herói","Vilão"]}]},
-  {"type":"createDocument","templateName":"Nome","title":"Título","values":{"Idade":32,"Papel":"Herói"}}
+  {"type":"createTemplate","name":"Nome","icon":"Users","color":"#e0a96d","textColor":"#ffffff","bgColor":"#1e293b","fields":[{"name":"Idade","type":"number"},{"name":"Papel","type":"select","options":["Herói","Vilão"]}]},
+  {"type":"styleTemplate","name":"Nome","color":"#e0a96d","textColor":"#ffffff","bgColor":"#1e293b","icon":"Users"},
+  {"type":"createDocument","templateName":"Nome","title":"Título","icon":"User","values":{"Idade":32,"Papel":"Herói"}}
 ]}
 \`\`\`
 
 Tipos de campo válidos: text, richtext, number, select, boolean, date, image, relationship, table.
 "icon" deve ser um nome de ícone do lucide-react (ex.: Users, MapPin, Sparkles, Sword, Book).
+Cores ("color" = cor do ícone, "textColor" = cor do texto na lista, "bgColor" = cor de fundo na lista)
+devem ser HEX (#rrggbb). Use "styleTemplate" quando o usuário pedir só mudança visual de uma categoria.
 Só inclua o bloco void-action quando o usuário realmente pedir criação. Nunca invente IDs.`;
 
 export const askAssistant = createServerFn({ method: "POST" })
