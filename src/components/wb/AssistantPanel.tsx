@@ -538,12 +538,16 @@ export function AssistantPanel({ open, onOpenChange }: { open: boolean; onOpenCh
                     ? `Criar categoria “${a.name}” (${a.fields?.length ?? 0} campos)`
                     : a.type === "styleTemplate"
                       ? `Estilizar categoria “${a.name}”`
-                      : `Criar documento “${a.title}” em ${a.templateName}`}
+                      : a.type === "updateTemplateFields"
+                        ? `Editar campos de “${a.name}”`
+                        : a.type === "generateImage"
+                          ? `Gerar imagem para “${a.documentTitle}”`
+                          : `Criar documento “${a.title}” em ${a.templateName}`}
                 </li>
               ))}
             </ul>
             <div className="flex gap-2">
-              <Button size="sm" className="h-7 text-xs" onClick={applyActions}>Aplicar</Button>
+              <Button size="sm" className="h-7 text-xs" onClick={() => void applyActions()}>Aplicar</Button>
               <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setPending([])}>
                 Descartar
               </Button>
