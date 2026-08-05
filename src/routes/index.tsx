@@ -67,11 +67,18 @@ function IndexPage() {
 }
 
 function ProjectsRoot() {
-  const [idx, setIdx] = useState<ProjectsIndex>(loadIndex);
+  const [idx, setIdx] = useState<ProjectsIndex>({ projects: [], currentId: null });
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    setIdx(loadIndex());
+    setReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
     try { localStorage.setItem(INDEX_KEY, JSON.stringify(idx)); } catch {}
-  }, [idx]);
+  }, [idx, ready]);
 
   const createProject = useCallback((name: string, icon: string): string => {
     const id = "p_" + uid();
@@ -126,6 +133,8 @@ function ProjectsRoot() {
   }, []);
 
   const current = idx.projects.find((p) => p.id === idx.currentId) ?? null;
+
+  if (!ready) return <div className="dark min-h-screen w-full bg-background" />;
 
   if (!current) {
     return (
