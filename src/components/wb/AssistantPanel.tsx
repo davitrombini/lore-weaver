@@ -5,7 +5,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useWorld } from "@/lib/worldbuilder/store";
 import { renderRichText } from "@/lib/worldbuilder/richFormat";
-import { askAssistant } from "@/lib/api/ai.functions";
+import { askAssistant, generateDocImage } from "@/lib/api/ai.functions";
 import type { FieldDef, FieldType, Template, WorkspaceState } from "@/lib/worldbuilder/types";
 import { toast } from "sonner";
 import { Icon } from "./icons";
@@ -45,7 +45,20 @@ interface ActionDocument {
   icon?: string;
   values?: Record<string, unknown>;
 }
-type Action = ActionTemplate | ActionStyle | ActionDocument;
+interface ActionFields {
+  type: "updateTemplateFields";
+  name: string;
+  addFields?: { name: string; type: FieldType; options?: string[] }[];
+  updateFields?: { name: string; newName?: string; type?: FieldType; options?: string[] }[];
+  removeFields?: string[];
+}
+interface ActionImage {
+  type: "generateImage";
+  documentTitle: string;
+  fieldName?: string;
+  prompt: string;
+}
+type Action = ActionTemplate | ActionStyle | ActionDocument | ActionFields | ActionImage;
 
 const FIELD_TYPES: FieldType[] = [
   "text", "richtext", "number", "select", "boolean", "date", "image", "relationship", "table",
@@ -104,6 +117,7 @@ export function AssistantPanel({ open, onOpenChange }: { open: boolean; onOpenCh
   const [boundDocs, setBoundDocs] = useState<string[]>([]);
   const [undoStack, setUndoStack] = useState<WorkspaceState[]>([]);
   const [redoStack, setRedoStack] = useState<WorkspaceState[]>([]);
+  const [generating, setGenerating] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -198,7 +212,7 @@ export function AssistantPanel({ open, onOpenChange }: { open: boolean; onOpenCh
     await run(next);
   };
 
-  const applyActions = () => {
+  const applyActions = async () => {
     setUndoStack((s) => [...s.slice(-9), state]);
     setRedoStack([]);
     const created = new Map<string, Template>();
@@ -209,6 +223,10 @@ export function AssistantPanel({ open, onOpenChange }: { open: boolean; onOpenCh
     let tplCount = 0;
     let docCount = 0;
     let styleCount = 0;
+    let fieldCount = 0;
+    let imgCount = 0;
+    const imageJobs: ActionImage[] = [];
+    const createdDocs = new Map<string, string>();
 
     for (const a of pending) {
       if (a.type === "createTemplate") {
@@ -256,10 +274,87 @@ export function AssistantPanel({ open, onOpenChange }: { open: boolean; onOpenCh
         });
         updateDocument(doc.id, { values, updatedAt: Date.now(), ...(a.icon ? { icon: a.icon } : {}) });
         docCount++;
+        createdDocs.set((a.title || "").toLowerCase(), doc.id);
+      } else if (a.type === "updateTemplateFields") {
+        const tpl = findTpl(a.name);
+        if (!tpl) continue;
+        let fields = [...tpl.fields];
+        for (const rm of a.removeFields ?? []) {
+          fields = fields.filter((f) => f.name.toLowerCase() !== rm.toLowerCase());
+        }
+        for (const up of a.updateFields ?? []) {
+          fields = fields.map((f) =>
+            f.name.toLowerCase() === up.name.toLowerCase()
+              ? {
+                  ...f,
+                  ...(up.newName ? { name: up.newName } : {}),
+                  ...(up.type && FIELD_TYPES.includes(up.type) ? { type: up.type } : {}),
+                  ...(up.options ? { options: up.options } : {}),
+                }
+              : f,
+          );
+        }
+        for (const add of a.addFields ?? []) {
+          if (!add?.name) continue;
+          if (fields.some((f) => f.name.toLowerCase() === add.name.toLowerCase())) continue;
+          fields.push({
+            id: "f_" + uid(),
+            name: add.name,
+            type: FIELD_TYPES.includes(add.type) ? add.type : "text",
+            ...(add.options ? { options: add.options } : {}),
+          });
+        }
+        const full: Template = { ...tpl, fields };
+        updateTemplate(full);
+        created.set(tpl.name.toLowerCase(), full);
+        fieldCount++;
+      } else if (a.type === "generateImage") {
+        imageJobs.push(a);
       }
     }
     setPending([]);
-    toast.success(`Aplicado: ${tplCount} categoria(s), ${styleCount} estilo(s), ${docCount} documento(s).`);
+
+    for (const job of imageJobs) {
+      const key = (job.documentTitle || "").toLowerCase();
+      const docId =
+        createdDocs.get(key) ??
+        state.documents.find((d) => !d.deletedAt && d.title.toLowerCase() === key)?.id;
+      if (!docId) continue;
+      const doc = state.documents.find((d) => d.id === docId);
+      const tpl =
+        created.get(
+          (state.templates.find((t) => t.id === doc?.templateId)?.name ?? "").toLowerCase(),
+        ) ?? state.templates.find((t) => t.id === doc?.templateId);
+      if (!tpl) continue;
+      let field = job.fieldName
+        ? tpl.fields.find((f) => f.type === "image" && f.name.toLowerCase() === job.fieldName!.toLowerCase())
+        : undefined;
+      field ??= tpl.fields.find((f) => f.type === "image");
+      if (!field) {
+        field = { id: "f_" + uid(), name: job.fieldName || "Imagem", type: "image" };
+        const full: Template = { ...tpl, fields: [...tpl.fields, field] };
+        updateTemplate(full);
+        created.set(tpl.name.toLowerCase(), full);
+      }
+      setGenerating((g) => [...g, job.documentTitle]);
+      try {
+        const { dataUrl } = await generateDocImage({ data: { prompt: job.prompt } });
+        const current = state.documents.find((d) => d.id === docId);
+        updateDocument(docId, {
+          values: { ...(current?.values ?? {}), [field.id]: dataUrl },
+          updatedAt: Date.now(),
+        });
+        imgCount++;
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Erro ao gerar imagem");
+      } finally {
+        setGenerating((g) => g.filter((x) => x !== job.documentTitle));
+      }
+    }
+
+    toast.success(
+      `Aplicado: ${tplCount} categoria(s), ${styleCount} estilo(s), ${fieldCount} edição(ões) de campos, ${docCount} documento(s), ${imgCount} imagem(ns).`,
+    );
   };
 
   const undoAi = () => {
