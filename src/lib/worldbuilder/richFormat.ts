@@ -21,7 +21,20 @@ function escape(s: string) {
   return s
     .replace(/&(?!(?:x(?:&[0-9a-f]){6})|[0-9a-frlonm])/gi, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Only allow safe URL schemes in generated links; anything else is neutralized.
+function safeUrl(raw: string): string {
+  const url = raw.trim();
+  if (/["'<>\s]/.test(url)) return "#";
+  // relative / anchor links are fine
+  if (/^(#|\/|\.\/|\.\.\/)/.test(url)) return url;
+  const scheme = url.match(/^([a-z][a-z0-9+.-]*):/i);
+  if (!scheme) return url.includes(":") ? "#" : url;
+  return ["http", "https", "mailto"].includes(scheme[1].toLowerCase()) ? url : "#";
 }
 
 function applyColorCodes(line: string): string {
@@ -79,7 +92,11 @@ function inlineMd(s: string): string {
     .replace(/`([^`]+)`/g, (_m, c) => `<code>${c}</code>`)
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    .replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      (_m, label: string, url: string) =>
+        `<a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">${label}</a>`,
+    );
   // Wiki links @(name)
   t = t.replace(/@\(([^)]+)\)/g, (_m, name: string) => {
     const id = WIKI_INDEX.get(name.trim().toLowerCase());
