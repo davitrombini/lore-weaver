@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Plus, Trash2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Pencil } from "lucide-react";
 import type { TableColumn, TableColumnType } from "@/lib/worldbuilder/types";
 import { formatBR } from "@/lib/worldbuilder/dateUtils";
-import { evalCellEquation } from "@/lib/worldbuilder/equation";
+import { evalCell, type GridContext } from "@/lib/worldbuilder/equation";
 import { nextColumnLabel } from "@/lib/worldbuilder/columnNames";
 
 export interface TableValue {
@@ -20,31 +20,24 @@ function normColname(name: string) {
   return name.trim().toLowerCase().replace(/\s+/g, "_");
 }
 
-function resolveCell(raw: string | number | boolean | undefined, cols: TableColumn[], row: Record<string, string | number | boolean>): number | undefined {
+function makeCtx(cols: TableColumn[], rows: Record<string, string | number | boolean>[], rowIndex: number): GridContext {
+  return {
+    colIds: cols.map((c) => c.id),
+    colNames: cols.map((c) => normColname(c.name)),
+    rows,
+    rowIndex,
+  };
+}
+
+function resolveCell(
+  raw: string | number | boolean | undefined,
+  cols: TableColumn[],
+  rows: Record<string, string | number | boolean>[],
+  rowIndex: number,
+): string | number | boolean | undefined {
   if (raw === undefined || raw === null || raw === "") return undefined;
-  if (typeof raw === "number") return raw;
-  if (typeof raw === "boolean") return raw ? 1 : 0;
-  const s = String(raw);
-  if (s.startsWith("=")) {
-    const nameToNum: Record<string, number> = {};
-    for (const c of cols) {
-      const v = row[c.id];
-      if (typeof v === "number") nameToNum[normColname(c.name)] = v;
-      else if (typeof v === "string" && v && !v.startsWith("=") && !isNaN(Number(v))) nameToNum[normColname(c.name)] = Number(v);
-      else if (typeof v === "boolean") nameToNum[normColname(c.name)] = v ? 1 : 0;
-    }
-    // resolve equation refs for referenced cells (single-level)
-    for (const c of cols) {
-      const v = row[c.id];
-      if (typeof v === "string" && v.startsWith("=")) {
-        const r = evalCellEquation(v.slice(1), nameToNum);
-        if (r !== undefined) nameToNum[normColname(c.name)] = r;
-      }
-    }
-    return evalCellEquation(s.slice(1), nameToNum);
-  }
-  const n = Number(s);
-  return isNaN(n) ? undefined : n;
+  if (typeof raw !== "string" || !raw.startsWith("=")) return raw as string | number | boolean;
+  return evalCell(raw.slice(1), makeCtx(cols, rows, rowIndex));
 }
 
 interface Props {
@@ -105,19 +98,23 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
       <div className="overflow-auto border border-border rounded-md">
         <table className="w-full text-sm">
           <thead className="bg-muted/40">
-            <tr>{cols.map((c) => <th key={c.id} className="text-left px-2 py-1.5 font-medium">{c.name}</th>)}</tr>
+            <tr>
+              <th className="w-10 text-right px-2 py-1.5 font-medium text-muted-foreground">#</th>
+              {cols.map((c) => <th key={c.id} className="text-left px-2 py-1.5 font-medium">{c.name}</th>)}
+            </tr>
           </thead>
           <tbody>
             {val.rows.map((r, i) => (
               <tr key={i} className="border-t border-border">
+                <td className="px-2 py-1 text-right text-xs text-muted-foreground tabular-nums select-none bg-muted/20">{i + 1}</td>
                 {cols.map((c) => {
                   const raw = r[c.id];
                   let display: React.ReactNode = raw as React.ReactNode;
                   if (c.type === "checkbox") display = raw ? "✓" : "";
                   else if (c.type === "date" && typeof raw === "string") display = formatBR(raw);
                   else if (typeof raw === "string" && raw.startsWith("=")) {
-                    const n = resolveCell(raw, cols, r);
-                    display = n === undefined ? raw : String(n);
+                    const n = resolveCell(raw, cols, val.rows, i);
+                    display = n === undefined ? "#ERRO" : String(n);
                   }
                   return <td key={c.id} className="px-2 py-1 tabular-nums">{display}</td>;
                 })}
@@ -135,6 +132,7 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
         <table className="w-full text-sm">
           <thead className="bg-muted/40">
             <tr>
+              <th className="w-10 text-right px-2 py-1 font-medium text-muted-foreground text-xs">#</th>
               {cols.map((c) => (
                 <th key={c.id} className="text-left px-1.5 py-1 font-medium">
                   {editableCols ? (
@@ -167,6 +165,7 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
           <tbody>
             {val.rows.map((r, i) => (
               <tr key={i} className="border-t border-border">
+                <td className="px-2 py-1 text-right text-xs text-muted-foreground tabular-nums select-none bg-muted/20">{i + 1}</td>
                 {cols.map((c) => {
                   const raw = r[c.id];
                   if (c.type === "checkbox") {
@@ -188,12 +187,12 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
                     // still allow "=..." equations even in number columns
                     const isEq = typeof raw === "string" && raw.startsWith("=");
                     if (isEq) {
-                      const n = resolveCell(raw as string, cols, r);
+                      const n = resolveCell(raw as string, cols, val.rows, i);
                       return (
                         <td key={c.id} className="px-1 py-0.5">
                           <input value={raw as string} onChange={(e) => setCell(i, c.id, e.target.value)}
                             className="bg-transparent text-xs w-full focus:outline-none font-mono" />
-                          <span className="block text-[10px] text-muted-foreground tabular-nums">= {n ?? "?"}</span>
+                          <span className="block text-[10px] text-muted-foreground tabular-nums">= {n === undefined ? "#ERRO" : String(n)}</span>
                         </td>
                       );
                     }
@@ -208,7 +207,7 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
                             else setCell(i, c.id, isNaN(Number(v)) ? v : Number(v));
                           }}
                           className="bg-transparent text-xs w-full focus:outline-none tabular-nums"
-                          placeholder="0 ou =a+b"
+                          placeholder="0 ou =A1+B2"
                         />
                       </td>
                     );
@@ -244,7 +243,7 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
             <Plus className="w-3 h-3" /> Coluna
           </button>
         )}
-        <span className="text-[10px] text-muted-foreground self-center">Dica: use <code className="font-mono">=a+b</code> para equações (nomes das colunas).</span>
+        <span className="text-[10px] text-muted-foreground self-center">Dica: fórmulas com <code className="font-mono">=A1+B2</code>, <code className="font-mono">=SUM(A1:A10)</code>, <code className="font-mono">=IF(C3&gt;10,"Sim","Não")</code> ou nomes de colunas (<code className="font-mono">=a+b</code>).</span>
       </div>
       {/* fake reference to avoid unused import lint */}
       <span className="hidden"><Pencil className="w-3 h-3" /></span>
