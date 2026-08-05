@@ -3,6 +3,7 @@ import { Plus, Trash2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Pencil
 import type { TableColumn, TableColumnType } from "@/lib/worldbuilder/types";
 import { formatBR } from "@/lib/worldbuilder/dateUtils";
 import { evalCellEquation } from "@/lib/worldbuilder/equation";
+import { nextColumnLabel } from "@/lib/worldbuilder/columnNames";
 
 export interface TableValue {
   columns?: TableColumn[];
@@ -80,7 +81,7 @@ export function TableField({ columns, value, onChange, onChangeColumns, readOnly
   // column edits
   const addCol = () => {
     if (!editableCols) return;
-    editableCols([...cols, { id: "c_" + Math.random().toString(36).slice(2, 8), name: `Col ${cols.length + 1}`, type: "text" }]);
+    editableCols([...cols, { id: "c_" + Math.random().toString(36).slice(2, 8), name: nextColumnLabel(cols), type: "text" }]);
   };
   const removeCol = (id: string) => {
     if (!editableCols) return;

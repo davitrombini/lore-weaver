@@ -9,6 +9,7 @@ import { Icon, ICON_CHOICES } from "./icons";
 import type { FieldDef, FieldType, Template, TableColumn, TableColumnType } from "@/lib/worldbuilder/types";
 import { cn } from "@/lib/utils";
 import { useModals } from "./confirm";
+import { nextColumnLabel } from "@/lib/worldbuilder/columnNames";
 
 // Prevent cycles: returns true if `candidateAncestorId` is a descendant of `templateId`.
 function isDescendant(templates: Template[], candidateAncestorId: string, templateId: string): boolean {
@@ -455,7 +456,7 @@ function FieldConfig({ field, templates, onChange }: { field: FieldDef; template
           </div>
         ))}
         <Button size="sm" variant="outline"
-          onClick={() => setCols([...cols, { id: "c_" + Math.random().toString(36).slice(2, 8), name: `Coluna ${cols.length + 1}`, type: "text" }])}
+          onClick={() => setCols([...cols, { id: "c_" + Math.random().toString(36).slice(2, 8), name: nextColumnLabel(cols), type: "text" }])}
         >
           <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar coluna
         </Button>
