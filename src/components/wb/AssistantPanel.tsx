@@ -526,6 +526,11 @@ export function AssistantPanel({ open, onOpenChange }: { open: boolean; onOpenCh
             <Sparkles className="w-3.5 h-3.5 animate-pulse" /> Pensando…
           </div>
         )}
+        {generating.length > 0 && (
+          <div className="mr-2 rounded-lg bg-muted/50 border border-border px-3 py-2 text-sm text-muted-foreground inline-flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 animate-pulse" /> Gerando imagem para “{generating[0]}”…
+          </div>
+        )}
         {pending.length > 0 && (
           <div className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 space-y-2">
             <div className="text-xs font-medium flex items-center gap-1">
