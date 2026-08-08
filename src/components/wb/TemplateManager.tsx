@@ -11,6 +11,17 @@ import { cn } from "@/lib/utils";
 import { useModals } from "./confirm";
 import { nextColumnLabel } from "@/lib/worldbuilder/columnNames";
 
+// Darken a hex color for automatic background derivation.
+function darken(hex: string, factor = 0.28): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return "#0f172a";
+  const n = parseInt(m[1], 16);
+  const r = Math.round(((n >> 16) & 255) * factor);
+  const g = Math.round(((n >> 8) & 255) * factor);
+  const b = Math.round((n & 255) * factor);
+  return "#" + [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("");
+}
+
 // Prevent cycles: returns true if `candidateAncestorId` is a descendant of `templateId`.
 function isDescendant(templates: Template[], candidateAncestorId: string, templateId: string): boolean {
   let cur: string | null | undefined = candidateAncestorId;
@@ -180,19 +191,7 @@ function TemplateEditor({
         <div className="flex items-center gap-1" title="Cor do ícone">
           <span className="text-[10px] text-muted-foreground">Ícone</span>
           <Input type="color" value={template.color ?? "#999999"}
-            onChange={(e) => onUpdate({ ...template, color: e.target.value })}
-            className="w-10 h-9 p-1" />
-        </div>
-        <div className="flex items-center gap-1" title="Cor do texto">
-          <span className="text-[10px] text-muted-foreground">Texto</span>
-          <Input type="color" value={template.textColor ?? "#e5e7eb"}
-            onChange={(e) => onUpdate({ ...template, textColor: e.target.value })}
-            className="w-10 h-9 p-1" />
-        </div>
-        <div className="flex items-center gap-1" title="Cor de fundo">
-          <span className="text-[10px] text-muted-foreground">Fundo</span>
-          <Input type="color" value={template.bgColor ?? "#0f172a"}
-            onChange={(e) => onUpdate({ ...template, bgColor: e.target.value })}
+            onChange={(e) => onUpdate({ ...template, color: e.target.value, bgColor: darken(e.target.value), textColor: "#ffffff" })}
             className="w-10 h-9 p-1" />
         </div>
         <Select value={template.icon} onValueChange={(v) => onUpdate({ ...template, icon: v })}>
