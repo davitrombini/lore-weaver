@@ -230,7 +230,7 @@ export function WorldProvider({ projectId, children }: { projectId: string; chil
         return JSON.parse(legacy) as WorkspaceState;
       }
     } catch {}
-    return initial(true);
+    return initial(false);
   });
 
   // Undo/redo history
